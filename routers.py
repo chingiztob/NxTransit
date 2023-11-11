@@ -1,5 +1,7 @@
 from heapq import heappop, heappush
 import bisect
+import multiprocessing
+import threading
 
 def calculate_delay_sorted(graph, from_node, to_node, current_time):
     # Проверка наличия отсортированных расписаний в атрибутах текущего ребра
@@ -22,7 +24,7 @@ def calculate_delay_sorted(graph, from_node, to_node, current_time):
         # # Если в атрибутах нет расписаний - использовать постоянный вес ребра
         return graph[from_node][to_node]['weight'], None
 
-def time_dependent_dijkstra_2(graph, source, target, start_time, track_used_routes = False):
+def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes = False):
     # https://doi.org/10.1016/j.entcs.2003.12.019
     # https://bradfieldcs.com/algos/graphs/dijkstras-algorithm/
     """
@@ -122,3 +124,90 @@ def time_dependent_dijkstra_2(graph, source, target, start_time, track_used_rout
         else:
             # Если путь не начинается с исходного узла, значит что-то пошло не так, путь не найден
             return [], float('inf'), -1
+        
+def single_source_time_dependent_dijkstra(graph, source, start_time):
+    """
+    Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.
+
+    Args:
+        graph (networkx.DiGraph): The graph to search.
+        source (hashable): The node to start the search from.
+        start_time (float): The time to start the search from.
+
+    Returns:
+        tuple: A tuple containing three dictionaries:
+            - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
+            - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
+            - travel_times: A dictionary mapping each node to the travel time from the source node.
+    """
+    if source not in graph:
+        raise ValueError("The source node does not exist in the graph.")
+
+    arrival_times = {node: float('inf') for node in graph.nodes}
+    predecessors = {node: None for node in graph.nodes}
+    arrival_times[source] = start_time
+    travel_times = {}
+    queue = [(start_time, source)]
+    
+    while queue:
+        current_time, current_node = heappop(queue)
+
+        for neighbor in graph.neighbors(current_node):
+            delay, _ = calculate_delay_sorted(graph, current_node, neighbor, current_time)
+            new_arrival_time = current_time + delay
+
+            if new_arrival_time < arrival_times[neighbor]:
+                arrival_times[neighbor] = new_arrival_time
+                predecessors[neighbor] = current_node
+                heappush(queue, (new_arrival_time, neighbor))
+            
+                travel_times[neighbor] = new_arrival_time - start_time
+    # Реконструкция пути не производится
+    # Однако на основе 'predecessors' можно восстановить путь к любому узлу
+
+    return arrival_times, predecessors, travel_times
+
+def single_source_time_dependent_dijkstra_merged(graph, source, start_time):
+    """
+    Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.
+
+    Args:
+        graph (networkx.DiGraph): The graph to search.
+        source (hashable): The node to start the search from.
+        start_time (float): The time to start the search from.
+
+    Returns:
+        dict: A dictionary where each key is a target node and the value is another dictionary with:
+            - 'arrival_time': The earliest arrival time from the source node to the target node.
+            - 'travel_time': The travel time from the source node to the target node.
+            - 'predecessor': The predecessor node on the shortest path from the source to the target node.
+    """
+    if source not in graph:
+        raise ValueError("The source node does not exist in the graph.")
+
+    times_and_predecessors = {node: {'arrival_time': float('inf'), 'predecessor': None} for node in graph.nodes}
+    times_and_predecessors[source]['arrival_time'] = start_time
+    queue = [(start_time, source)]
+    
+    while queue:
+        current_time, current_node = heappop(queue)
+
+        for neighbor in graph.neighbors(current_node):
+            delay, _ = calculate_delay_sorted(graph, current_node, neighbor, current_time)
+            new_arrival_time = current_time + delay
+
+            if new_arrival_time < times_and_predecessors[neighbor]['arrival_time']:
+                times_and_predecessors[neighbor]['arrival_time'] = new_arrival_time
+                times_and_predecessors[neighbor]['predecessor'] = current_node
+                heappush(queue, (new_arrival_time, neighbor))
+
+    # Расчет атрибута 'travel_time' для каждого узла
+    for node in times_and_predecessors:
+        if times_and_predecessors[node]['arrival_time'] != float('inf'):
+            times_and_predecessors[node]['travel_time'] = times_and_predecessors[node]['arrival_time'] - start_time
+        else:
+            times_and_predecessors[node]['travel_time'] = None
+    # Реконструкция пути не производится
+    # Однако на основе 'predecessors' можно восстановить путь к любому узлу
+    
+    return times_and_predecessors

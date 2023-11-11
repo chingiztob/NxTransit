@@ -30,8 +30,6 @@ def _add_stop_times_to_graph(G: nx.MultiDiGraph, sorted_stop_times: pd.DataFrame
         departure = parse_time_to_seconds(start_stop['departure_time'])
         arrival = parse_time_to_seconds(end_stop['arrival_time'])
         
-        
-    
         # Получение route_id по внешнему ключу из trips_df
         route_id = trips_df.loc[trips_df['trip_id'] == start_stop['trip_id'], 'route_id'].values[0]
 
@@ -111,7 +109,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
 
     print(f'GTFS data loaded\n{len(filtered_stops)} of {len(stop_times_df)} trips retained')
 
-    # Add nodes to the graph with stop_id as the node id and lat/lon as node attributes.
+    # Добавление узлов в граф с координатами остановок
     for _, stop in stops_df.iterrows():
         G.add_node(stop['stop_id'], pos=(stop['stop_lon'], stop['stop_lat']), 
                    x=stop['stop_lon'], y=stop['stop_lat'])
