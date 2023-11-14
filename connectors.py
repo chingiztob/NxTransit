@@ -20,7 +20,8 @@ def latlon_to_utm(lat, lon):
 
 def connect_stops_to_streets(graph, stops: pd.DataFrame):
     """
-    Connects GTFS stops to the nearest street node in the graph.
+    Connects GTFS stops to the nearest street node in the graph
+    using geographic coordinates in decimal degrees.
     """
     # Создание списка кортежей узлов улиц (x, y, node_id)
     node_data = [(data['x'], data['y'], n) 
@@ -66,4 +67,90 @@ def connect_stops_to_streets(graph, stops: pd.DataFrame):
                            geometry=linestring
                            )
 
+    return graph
+
+def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
+    """
+    Connects GTFS stops to the nearest street node in the graph
+    using rectangular UTM coordinates.
+    """
+    # Создание списка кортежей узлов улиц (x, y, node_id)
+    node_data = [(data['UTM_X'], data['UTM_Y'], n) 
+                 for n, data in graph.nodes(data=True) 
+                 if 'UTM_X' in data and 'UTM_Y' in data 
+                 and data['type'] == 'street']
+    
+    node_data_wgs = [(data['x'], data['y'], n) 
+                    for n, data in graph.nodes(data=True) 
+                    if 'y' in data and 'x' in data 
+                    and data['type'] == 'street']
+    
+    # Создание KD-дерева (www.wikipedia.org/wiki/K-d_tree) для 
+    # решения задачи поиска ближайшего соседа
+    # непосредственно дерево создается из списка кортежей узлов улиц (x, y, node_id)
+    tree = cKDTree([(x, y) for x, y, _ in node_data])
+    
+    for _, stop in stops.iterrows():
+        
+        stop_wgs = (stop['stop_lon'], stop['stop_lat'])
+        x, y = graph.nodes[stop['stop_id']]['UTM_X'], graph.nodes[stop['stop_id']]['UTM_Y']
+        stop_coords = (x, y)   
+        
+        # query возращает расстояние до ближайшего соседа и его индекс в дереве
+        distance, idx = tree.query(stop_coords)
+        nearest_street_node = node_data[idx][2]
+
+        # Добавляем ребро коннектор в граф
+        # Соединение происходит только если найденный узел является улицей (дополнительная проверка)
+        # Возможно она и не нужна
+        if graph.nodes[nearest_street_node]['type'] == 'street':  # Соединение 
+            
+            # Создаем геометрию ребра в формате Shapely LineString
+            stop_geom = shapely.geometry.Point(stop_wgs)
+            street_geom = shapely.geometry.Point((node_data_wgs[idx][0], node_data_wgs[idx][1]))
+            linestring = shapely.geometry.LineString([stop_geom, street_geom])
+
+            walk_speed_mps = 1.39
+            # На данный момент при расчете используется некорректное расстояние
+            # Будет переделано с UTM
+            walk_time = distance / walk_speed_mps
+    
+            # Заполняем атрибуты ребра
+            graph.add_edge(stop['stop_id'], nearest_street_node,
+                           weight=walk_time,
+                           type='connector',
+                           geometry=linestring
+                           )
+            graph.add_edge(nearest_street_node, stop['stop_id'],
+                           weight=walk_time,
+                           type='connector',
+                           geometry=linestring
+                           )
+
+    return graph
+
+def _fill_coordinates(graph):
+    '''
+    Populates the X, Y, UTM_X, and UTM_Y attributes of each node in the graph based on the stop coordinates.
+    
+    Args:
+    ----------
+    - graph: NetworkX graph representing transit system.
+    - stops: Pandas DataFrame containing stop_id, stop_lat, and stop_lon columns.
+    
+    Returns:
+    ----------
+    - graph: NetworkX graph with updated node attributes.
+    '''
+    for node in graph.nodes():
+        try:
+
+            UTM = latlon_to_utm(graph.nodes[node]['y'], 
+                                graph.nodes[node]['x'])
+            
+            graph.nodes[node]['UTM_X'] = UTM[0]
+            graph.nodes[node]['UTM_Y'] = UTM[1]
+        except:
+            continue
+        
     return graph

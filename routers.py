@@ -1,7 +1,5 @@
 from heapq import heappop, heappush
 import bisect
-import multiprocessing
-import threading
 
 def calculate_delay_sorted(graph, from_node, to_node, current_time):
     # Проверка наличия отсортированных расписаний в атрибутах текущего ребра
@@ -141,7 +139,7 @@ def single_source_time_dependent_dijkstra(graph, source, start_time):
             - travel_times: A dictionary mapping each node to the travel time from the source node.
     """
     if source not in graph:
-        raise ValueError("The source node does not exist in the graph.")
+        raise ValueError(f"The source node {source} does not exist in the graph.")
 
     arrival_times = {node: float('inf') for node in graph.nodes}
     predecessors = {node: None for node in graph.nodes}
@@ -183,7 +181,7 @@ def single_source_time_dependent_dijkstra_merged(graph, source, start_time):
             - 'predecessor': The predecessor node on the shortest path from the source to the target node.
     """
     if source not in graph:
-        raise ValueError("The source node does not exist in the graph.")
+        raise ValueError(f"The source node {source} does not exist in the graph.")
 
     times_and_predecessors = {node: {'arrival_time': float('inf'), 'predecessor': None} for node in graph.nodes}
     times_and_predecessors[source]['arrival_time'] = start_time

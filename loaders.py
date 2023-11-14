@@ -7,7 +7,8 @@ import osmnx as ox
 from shapely.geometry import Point
 
 from converters import parse_time_to_seconds
-from connectors import connect_stops_to_streets
+from connectors import connect_stops_to_streets, _fill_coordinates
+
 
 def _preprocess_schedules(graph):
     # Сортировка расписаний для ускоренного поиска ближейших отправлений при помощи бинарного поиска
@@ -198,8 +199,11 @@ def create_GTFS_graph(GTFSpath: str, departure_time_input: str, day_of_week: str
         else:
             G_c.nodes[node]['type'] = 'street'
     
+    _fill_coordinates(G_c)
+    
     #Соединение остановок с улицами OSM
     G_combined = connect_stops_to_streets(G_c, stops)
+    
     del(G_c)
     print(f'Число узлов: {G_combined.number_of_nodes()}\n'
             f'Число ребер: {G_combined.number_of_edges()}\n'
