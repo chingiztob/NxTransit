@@ -7,7 +7,7 @@ import osmnx as ox
 from shapely.geometry import Point
 
 from converters import parse_time_to_seconds
-from connectors import connect_stops_to_streets, _fill_coordinates
+from connectors import connect_stops_to_streets, _fill_coordinates, connect_stops_to_streets_utm
 
 
 def _preprocess_schedules(graph):
@@ -53,21 +53,19 @@ def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, du
 
 def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, duration_seconds):
     """
-    Загружает данные GTFS из заданного пути каталога и возвращает граф, название города, время отправления в секундах и датафрейм остановок.
+    Загружает данные GTFS из заданного пути каталога и возвращает граф, а также датафрейм остановок.
     
-    Ars:
+    Args:
     ---------
     - GTFSpath (str): Путь к каталогу, содержащему файлы данных GTFS.
     - departure_time_input (str): Время отправления в формате HH:MM:SS.
     - day_of_week (str): День недели в нижнем регистре, например "monday".
-    - duration_seconds (int): Длительность временного окна в секундах.
+    - duration_seconds (int): Длительность временного окна загрузки в секундах.
 
     Returns:
     ---------
     - Tuple[nx.MultiDiGraph, str, int, pd.DataFrame]: Кортеж, содержащий следующее:
         - nx.MultiDiGraph: Граф, представляющий данные GTFS.
-        - str: Название города.
-        - int: Время отправления в секундах с начала суток.
         - pd.DataFrame: Датафрейм, содержащий информацию об остановках.
     """
     # Initialize the graph and read data files.
@@ -124,7 +122,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
     # Предварительная сортировка расписаний для ускоренного поиска при помощи бинарного поиска
     _preprocess_schedules(G) 
     
-    return G, city_name, departure_time_seconds, stops_df
+    return G, stops_df
 
 def _load_osm(stops)-> nx.DiGraph:
     """
@@ -142,7 +140,7 @@ def _load_osm(stops)-> nx.DiGraph:
                             [Point(lon, lat) for lon, lat 
                             in zip(stops['stop_lon'], stops['stop_lat'])
                             ]).unary_union.convex_hull
-    print('Выпуклая оболочка построена')
+    print('Выпуклая оболочка построена, начинается загрузка графа улиц')
 
     #Загрузка OSM в пределеах полигона
     G_city = ox.graph_from_polygon(boundary, 
@@ -177,12 +175,10 @@ def create_GTFS_graph(GTFSpath: str, departure_time_input: str, day_of_week: str
     Returns:
     ----------
     - G_combined (nx.DiGraph): Объединенный граф.
-    - city_name (str): Название города.
-    - departure_time_seconds (int): Время отправления в секундах.
     - stops (pd.DataFrame): Pd.Dataframe с информацией об остановках.
     """
-    G_transit, city_name, departure_time_seconds, stops = _load_GTFS(GTFSpath, departure_time_input, 
-                                                                     day_of_week, duration_seconds)
+    G_transit, stops = _load_GTFS(GTFSpath, departure_time_input, 
+                                  day_of_week, duration_seconds)
     #Импорт данных OSM
     G_city = _load_osm(stops)
     print('Граф улиц загружен')
@@ -201,8 +197,9 @@ def create_GTFS_graph(GTFSpath: str, departure_time_input: str, day_of_week: str
     
     _fill_coordinates(G_c)
     
+    print("Начинается соединение графов")
     #Соединение остановок с улицами OSM
-    G_combined = connect_stops_to_streets(G_c, stops)
+    G_combined = connect_stops_to_streets_utm(G_c, stops)
     
     del(G_c)
     print(f'Число узлов: {G_combined.number_of_nodes()}\n'
@@ -220,4 +217,4 @@ def create_GTFS_graph(GTFSpath: str, departure_time_input: str, day_of_week: str
 
         del(df, df_nodes)
     
-    return G_combined, city_name, departure_time_seconds, stops
+    return G_combined, stops
