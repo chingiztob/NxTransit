@@ -6,8 +6,8 @@ import geopandas as gpd
 import osmnx as ox
 from shapely.geometry import Point
 
-from converters import parse_time_to_seconds
-from connectors import connect_stops_to_streets, _fill_coordinates, connect_stops_to_streets_utm
+from .converters import parse_time_to_seconds
+from .connectors import connect_stops_to_streets, _fill_coordinates, connect_stops_to_streets_utm
 
 
 def _preprocess_schedules(graph):
@@ -40,7 +40,7 @@ def _add_stop_times_to_graph(G: nx.MultiDiGraph, sorted_stop_times: pd.DataFrame
         if G.has_edge(*edge):
             G[edge[0]][edge[1]]['schedules'].append(schedule_info)
         else:
-            G.add_edge(*edge, schedules=[schedule_info])
+            G.add_edge(*edge, schedules=[schedule_info], type = 'transit')
 
 def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, duration_seconds: int):
     """Filters stop_times to only include trips that occur within a specified time window."""
@@ -153,13 +153,14 @@ def _load_osm(stops)-> nx.DiGraph:
         distance = data['length']
         walk_time = distance / walk_speed_mps
         data['weight'] = walk_time
+        data['type'] = 'street'
 
     #Конвертация MultiGraph из OSMNX в DiGraph
     G_city = nx.DiGraph(G_city)
 
     return G_city
  
-def create_GTFS_graph(GTFSpath: str, departure_time_input: str, day_of_week: str, 
+def feed_to_graph(GTFSpath: str, departure_time_input: str, day_of_week: str, 
                       duration_seconds, save_to_csv: bool) -> nx.DiGraph:
     """
     Создает граф, объединяющий данные GTFS и OSM.

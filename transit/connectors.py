@@ -158,7 +158,7 @@ def _fill_coordinates(graph):
 
 def snap_points_to_network(graph, points):
     """
-    Snaps point features from geodataframe to 
+    Snaps point features from GeoDataFrame to 
     the nearest street node in the graph.
     
     Args:
@@ -168,7 +168,7 @@ def snap_points_to_network(graph, points):
     
     Returns:
     ----------
-    - graph: NetworkX graph with updated node attributes.
+    - graph: NetworkX graph with added snapped points as nodes.
     """
     # Создание списка кортежей узлов улиц (x, y, node_id)
     node_data = [(data['x'], data['y'], n) 

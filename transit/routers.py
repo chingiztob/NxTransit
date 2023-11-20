@@ -1,6 +1,7 @@
 from heapq import heappop, heappush
 import bisect
 
+
 def calculate_delay_sorted(graph, from_node, to_node, current_time):
     # Проверка наличия отсортированных расписаний в атрибутах текущего ребра
     if 'sorted_schedules' in graph[from_node][to_node]:

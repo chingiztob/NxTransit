@@ -7,8 +7,9 @@ import geopandas as gpd
 from shapely.geometry import Point, Polygon
 from pympler import asizeof
 
-from routers import single_source_time_dependent_dijkstra
-from other import estimate_ram, bytes_to_readable
+from .routers import single_source_time_dependent_dijkstra
+from .other import estimate_ram, bytes_to_readable
+
 
 # Функция для расчета матрицы источник-назначение между всеми остановками (БЕТА)
 def calculate_OD_matrix(graph, stops, departure_time):
@@ -50,7 +51,7 @@ def calculate_OD_matrix(graph, stops, departure_time):
     results_df = pd.DataFrame(results)
     results_df.to_csv(r"D:\Python_progs\Output\results2.csv", index=False)
 
-def calculate_OD_worker(source_stop, stops_list, graph, departure_time):
+def _calculate_OD_worker(source_stop, stops_list, graph, departure_time):
     """
     Internal worker function to calculate the OD matrix for a single source stop.
     """
@@ -84,12 +85,12 @@ def calculate_OD_matrix_parallel(graph, stops, departure_time, num_processes=2):
     """
     print(f'Выполняется расчет с использованием {num_processes} процессов')
     
-    
     # Предварительная попытка оценить достаточность
     # доступной памяти для выполнения расчетов
     graph_size = asizeof.asizeof(graph)
     ram, free_ram = estimate_ram()
     
+    # Эмпирическая формула :)
     expected_ram = graph_size * 5 + num_processes * graph_size * 2.5
     
     if expected_ram > free_ram:
@@ -104,7 +105,7 @@ def calculate_OD_matrix_parallel(graph, stops, departure_time, num_processes=2):
 
     with multiprocessing.Pool(processes=num_processes) as pool:
         # Фиксаця аргументов функции calculate_OD_worker
-        partial_worker = partial(calculate_OD_worker, stops_list=stops_list, 
+        partial_worker = partial(_calculate_OD_worker, stops_list=stops_list, 
                                  graph=graph, departure_time=departure_time)
         results = pool.map(partial_worker, stops_list)
 
@@ -179,7 +180,7 @@ def create_grid(geodataframe, cell_size):
 
     Returns:
     --------
-        modified graph
+        gpd.GeoDataFrame: Polygon grid
     """
     geodataframe = geodataframe.to_crs("EPSG:4087")
     xmin, ymin, xmax, ymax = geodataframe.total_bounds
