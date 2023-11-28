@@ -132,7 +132,7 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
 
 def _fill_coordinates(graph):
     '''
-    Populates the X, Y, UTM_X, and UTM_Y attributes of each node in the graph based on the stop coordinates.
+    Populates the UTM_X, and UTM_Y attributes of each node in the graph based on the stop coordinates.
     
     Args:
     ----------

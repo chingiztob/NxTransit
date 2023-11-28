@@ -1,6 +1,8 @@
+import os
 import multiprocessing
 import time
 from functools import partial
+from statistics import mean
 
 import pandas as pd
 import geopandas as gpd
@@ -204,3 +206,140 @@ def create_grid(geodataframe, cell_size):
                                          ).to_crs("EPSG:4326")
     
     return grid_geodataframe
+
+def calculate_edge_frequency(graph, start_time, end_time):
+    """
+    Calculates the frequency of edges in a graph based 
+    on the schedules between start_time and end_time.
+    
+    Args:
+        graph (networkx.Graph): The graph containing the edges and schedules.
+        start_time (int): The start time in seconds from midnight.
+        end_time (int): The end time in seconds from midnight.
+    
+    Returns:
+        None
+    """
+    
+    for edge in graph.edges(data = True):
+        if 'schedules' in edge[2]:
+            
+            trips = edge[2]['sorted_schedules']
+            seq = [(trips[i+1][0] - trips[i][0]) 
+                   for i in range(len(trips)-1)
+                   if trips[i][0] >= start_time and trips[i][0] <= end_time
+                ]
+
+            if len(seq) > 0:
+                frequency = mean(seq)
+            else:
+                frequency = None
+                
+            edge[2]['frequency'] = frequency
+    
+            graph.nodes[edge[1]]['frequency'] = frequency
+
+def validate_feed(gtfs_path: str) -> bool:
+    """
+    Validates the GTFS feed located at the specified path.
+
+    Args:
+    - gtfs_path (str): Path to the GTFS dataset directory.
+
+    Returns:
+    - bool: True if the GTFS feed is valid, False otherwise.
+    """
+
+    # List of required GTFS files
+    required_files = [
+        "agency.txt", "stops.txt", "routes.txt",
+        "trips.txt", "stop_times.txt", "calendar.txt"
+    ]
+
+    # Check for the existence of required GTFS files
+    for file in required_files:
+        if not os.path.isfile(os.path.join(gtfs_path, file)):
+            print(f"Missing required file: {file}")
+            return False
+
+    try:
+        # Load GTFS files
+        agency_df = pd.read_csv(os.path.join(gtfs_path, "agency.txt"))
+        stops_df = pd.read_csv(os.path.join(gtfs_path, "stops.txt"))
+        routes_df = pd.read_csv(os.path.join(gtfs_path, "routes.txt"))
+        trips_df = pd.read_csv(os.path.join(gtfs_path, "trips.txt"))
+        stop_times_df = pd.read_csv(os.path.join(gtfs_path, "stop_times.txt"), low_memory=False)
+        calendar_df = pd.read_csv(os.path.join(gtfs_path, "calendar.txt"))
+        
+        critical_erorrs = False
+
+        # Validate agency.txt
+        if agency_df.empty or 'agency_id' not in agency_df.columns:
+            print("agency.txt is invalid or missing required 'agency_id' column.")
+
+        # Validate stops.txt
+        if stops_df.empty or 'stop_id' not in stops_df.columns:
+            print("stops.txt is invalid or missing required 'stop_id' column.")
+            critical_erorrs = True
+
+        # Validate routes.txt
+        if routes_df.empty or 'route_id' not in routes_df.columns or 'route_id' not in routes_df.columns:
+            print("routes.txt is invalid or missing required columns (agency_id, route_id).")
+            critical_erorrs = True
+            
+        if not set(routes_df['agency_id']).issubset(set(agency_df['agency_id'])):
+            print("Mismatch in agency IDs between routes and agency files.")
+            critical_erorrs = True
+            
+        # Validate trips.txt
+        if trips_df.empty or 'trip_id' not in trips_df.columns or 'route_id' not in trips_df.columns:
+            print("trips.txt is invalid or missing required columns.")
+            critical_erorrs = True
+
+        if not set(trips_df['route_id']).issubset(set(routes_df['route_id'])):
+            print("Mismatch in route IDs between trips and routes files.")
+            critical_erorrs = True
+            
+        # Validate stop_times.txt
+        if stop_times_df.empty or 'trip_id' not in stop_times_df.columns or 'stop_id' not in stop_times_df.columns:
+            print("stop_times.txt is invalid or missing required columns.")
+            critical_erorrs = True
+
+        if not set(stop_times_df['trip_id']).issubset(set(trips_df['trip_id'])):
+            print("Mismatch in trip IDs between stop_times and trips files.")
+
+        if not set(stop_times_df['stop_id']).issubset(set(stops_df['stop_id'])):
+            print("Mismatch in stop IDs between stop_times and stops files.")
+
+        # Validate calendar.txt
+        if calendar_df.empty:
+            print("calendar.txt is invalid or empty.")
+
+        # Validate stop_times.txt for blank times and format of times
+        if 'departure_time' not in stop_times_df.columns or 'arrival_time' not in stop_times_df.columns:
+            print("stop_times.txt is missing required time columns.")
+
+        # Check for blank times
+        if stop_times_df['departure_time'].isnull().any() or stop_times_df['arrival_time'].isnull().any():
+            print("Blank departure or arrival times found in stop_times.txt.")
+
+        # Validate time format (HH:MM:SS)
+        time_format_regex = r'^(\d{2}):([0-5]\d):([0-5]\d)$' #check for HH:MM:SS format
+        invalid_departure_times = stop_times_df[~stop_times_df['departure_time'].str.match(time_format_regex)]
+        invalid_arrival_times = stop_times_df[~stop_times_df['arrival_time'].str.match(time_format_regex)]
+
+        if not invalid_departure_times.empty or not invalid_arrival_times.empty:
+            print("Invalid time format found in departure or arrival times in stop_times.txt.")
+        
+        # Additional format and consistency checks....
+     
+    except Exception as e:
+        print(f"Error during validation: {e}")
+        return False
+
+    if critical_erorrs:
+        ("GTFS feed contains critical errors.")
+        return False
+    else:
+        print("GTFS feed is valid.")
+        return True
