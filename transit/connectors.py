@@ -18,6 +18,7 @@ def latlon_to_utm(lat, lon):
     x,y,_,_ = utm.from_latlon(lat,lon)
     return x,y
 
+#deprecated
 def connect_stops_to_streets(graph, stops: pd.DataFrame):
     """
     Connects GTFS stops to the nearest street node in the graph

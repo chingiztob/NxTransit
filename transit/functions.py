@@ -96,9 +96,13 @@ def calculate_OD_matrix_parallel(graph, stops, departure_time, num_processes=2):
     expected_ram = graph_size * 5 + num_processes * graph_size * 2.5
     
     if expected_ram > free_ram:
-        raise MemoryError(f'Размер графа {bytes_to_readable(graph_size)}, ожидаемые затраты {expected_ram} превышают доступную память {bytes_to_readable(free_ram)}')
+        raise MemoryError(f'Размер графа {bytes_to_readable(graph_size)}, '
+                          f'ожидаемые затраты {expected_ram} превышают доступную '
+                          f'память {bytes_to_readable(free_ram)}')
     else:
-        print(f'Размер графа {bytes_to_readable(graph_size)}, Ожидаемые затраты {bytes_to_readable(expected_ram)}, доступная память {bytes_to_readable(free_ram)}')
+        print(f'Размер графа {bytes_to_readable(graph_size)}, Ожидаемые затраты '
+              f'{bytes_to_readable(expected_ram)}, доступная память '
+              f'{bytes_to_readable(free_ram)}')
 
     stops_list = stops['stop_id'].tolist() #Список остановок
     results = []
@@ -331,7 +335,7 @@ def validate_feed(gtfs_path: str) -> bool:
         if not invalid_departure_times.empty or not invalid_arrival_times.empty:
             print("Invalid time format found in departure or arrival times in stop_times.txt.")
         
-        # Additional format and consistency checks....
+        # Additional format and consistency checks= will be added
      
     except Exception as e:
         print(f"Error during validation: {e}")

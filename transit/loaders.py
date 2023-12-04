@@ -19,7 +19,8 @@ def _preprocess_schedules(graph):
                                                  key=lambda x: x[0])
 
 def _add_edges_to_graph(G: nx.MultiDiGraph, sorted_stop_times: pd.DataFrame, 
-                                        trips_df: pd.DataFrame, shapes: dict, 
+                                        trips_df: pd.DataFrame, shapes: dict,
+                                        trip_to_shape_map: dict, 
                                         read_shapes: bool = False):
     """
     Adds edges with schedule information and optionally shape geometry between stops to the graph.
@@ -36,8 +37,6 @@ def _add_edges_to_graph(G: nx.MultiDiGraph, sorted_stop_times: pd.DataFrame,
 
     # Предобработка с созданием словаря trip_id -> shape_id с целью
     # Избежать повторного поиска shape_id по датафрейму для каждого рейса
-    if read_shapes:
-        trip_to_shape_map = trips_df.set_index('trip_id')['shape_id'].to_dict()
 
     for i in range(len(sorted_stop_times) - 1):
         start_stop = sorted_stop_times.iloc[i] # i-ая остановка (строка DF)
@@ -103,16 +102,23 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
     G = nx.DiGraph()
 
     stops_df = pd.read_csv(os.path.join(GTFSpath, "stops.txt"), 
-                           usecols=['stop_id', 'stop_lat', 'stop_lon'])
+                           usecols=['stop_id', 
+                                    'stop_lat', 
+                                    'stop_lon'])
     
     stop_times_df = pd.read_csv(os.path.join(GTFSpath, "stop_times.txt"), 
-                                usecols=['departure_time', 'trip_id', 
-                                         'stop_id', 'stop_sequence', 'arrival_time'])
+                                usecols=['departure_time', 
+                                         'trip_id', 
+                                         'stop_id', 
+                                         'stop_sequence', 
+                                         'arrival_time'
+                                         ])
     
     trips_df = pd.read_csv(os.path.join(GTFSpath, "trips.txt"))
     
     routes = pd.read_csv(os.path.join(GTFSpath, "routes.txt"), 
-                         usecols=['route_id', 'route_short_name'])
+                         usecols=['route_id', 
+                                  'route_short_name'])
     
     # Загрузка файла shapes.txt и сгруппированной геометрии 
     if read_shapes:
@@ -123,8 +129,12 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
         shapes = shapes_df.groupby('shape_id').apply(
             lambda group: LineString(group[['shape_pt_lon', 'shape_pt_lat']].values)
             )
+
+        trip_to_shape_map = trips_df.set_index('trip_id')['shape_id'].to_dict()
+        
     else:
         shapes = None
+        trip_to_shape_map = None
   
     # Присоединение информации о маршрутах к trips
     trips_df = trips_df.merge(routes, on='route_id')
@@ -137,9 +147,11 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
         service_ids = calendar_df[calendar_df[day_of_week] == 1]['service_id']
         trips_df = trips_df[trips_df['service_id'].isin(service_ids)]
     else:
-        print('calendar.txt not found, loading all data')
+        raise FileNotFoundError('calendar.txt not found')
+        #print('calendar.txt not found, loading all data')
     
-    # Фильтрация только тех рейсов, которые соответствуют условиям
+    # Фильтрация только тех рейсов из файла 'stop_time.txt'
+    # которые функционируют в указанный день недели и временной период
     valid_trips = stop_times_df['trip_id'].isin(trips_df['trip_id'])
     stop_times_df = stop_times_df[valid_trips].dropna()
 
@@ -147,7 +159,8 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
     departure_time_seconds = parse_time_to_seconds(departure_time_input)
     
     # Выборка только тех рейсов, которые соответствуют указанному временному окну
-    filtered_stops = _filter_stop_times_by_time(stop_times_df, departure_time_seconds, 
+    filtered_stops = _filter_stop_times_by_time(stop_times_df, 
+                                                departure_time_seconds, 
                                                 duration_seconds
                                                 )
 
@@ -155,20 +168,28 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
 
     # Добавление узлов в граф с координатами остановок
     for _, stop in stops_df.iterrows():
-        G.add_node(stop['stop_id'], type = 'transit', pos=(stop['stop_lon'], stop['stop_lat']), 
-                   x=stop['stop_lon'], y=stop['stop_lat'])
+        G.add_node(stop['stop_id'], 
+                   type = 'transit', 
+                   pos=(stop['stop_lon'], stop['stop_lat']), 
+                   x=stop['stop_lon'], 
+                   y=stop['stop_lat']
+                   )
     
     # Разбиение всех trips на группы по trip_id, далее итеративная обработка каждой группы
     # Для каждой группы сортировка по stop_sequence, далее добавление ребер в граф
     for trip_id, group in filtered_stops.groupby('trip_id'):
         sorted_group = group.sort_values('stop_sequence')
-        _add_edges_to_graph(G, sorted_group, trips_df = trips_df, 
-                                 shapes = shapes, read_shapes = read_shapes)
+        _add_edges_to_graph(G, 
+                            sorted_group, 
+                            trips_df = trips_df, 
+                            shapes = shapes, 
+                            read_shapes = read_shapes,
+                            trip_to_shape_map = trip_to_shape_map)
         
     # Предварительная сортировка расписаний для ускоренного поиска при помощи бинарного поиска
     _preprocess_schedules(G) 
     
-    print('Закончено формирование графа транспорта')
+    print('Transit graph created')
         
     return G, stops_df
 
@@ -187,14 +208,16 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
     boundary = gpd.GeoSeries(
                             [Point(lon, lat) for lon, lat 
                             in zip(stops['stop_lon'], stops['stop_lat'])
-                            ]).unary_union.convex_hull
-    print('Выпуклая оболочка построена, начинается загрузка графа улиц OSM в сети')
-
+                            ]
+                            ).unary_union.convex_hull
+    
+    print('Loading OSM graph via OSMNX')
     #Загрузка OSM в пределеах полигона
     G_city = ox.graph_from_polygon(boundary, 
                                    network_type='walk', 
                                    simplify=True)
-    print('Граф улиц загружен')
+    print('Street network graph created')
+    
     #Добавление времени пешего пути на улицах
     walk_speed_mps = 1.39  # 5кмч
     for _, _, _, data in G_city.edges(data=True, keys = True):
@@ -214,12 +237,21 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
     
     return G_city
  
-def feed_to_graph(GTFSpath: str, departure_time_input: str, day_of_week: str, 
-                      duration_seconds, save_to_csv: bool, read_shapes = False, input_graph_path = None, 
-                      output_graph_path = None, save_graphml = False, load_graphml = False, 
-                      ) -> nx.DiGraph:
+def feed_to_graph(
+    GTFSpath: str, 
+    departure_time_input: str, 
+    day_of_week: str, 
+    duration_seconds: int, 
+    save_to_csv: bool = False, 
+    read_shapes = False, 
+    input_graph_path = None, 
+    output_graph_path = None, 
+    save_graphml = False, 
+    load_graphml = False, 
+    ) -> nx.DiGraph:
     """
-    Создает граф, объединяющий данные GTFS и OSM.
+    Создает мультимодальный граф, на основе данных о 
+    траспорте в формате GTFS и OpenStreetMap.
     
     Args:
     ---------
@@ -244,7 +276,7 @@ def feed_to_graph(GTFSpath: str, departure_time_input: str, day_of_week: str,
                                   read_shapes = read_shapes)
     
     if load_graphml:
-        print('Выполняется загрузка графа OSM из файла GraphML')
+        print('Loading OSM graph from GraphML file')
         
         # Словарь с типами данных для ребер
         edge_dtypes = {'weight': float, 'length': float}
@@ -261,14 +293,14 @@ def feed_to_graph(GTFSpath: str, departure_time_input: str, day_of_week: str,
     # Заполнение прямоугольных координат UTM для узлов графа
     _fill_coordinates(G_c)
     
-    print("Начинается соединение графов")
+    print("Combining graphs")
     #Соединение остановок с улицами OSM
     G_combined = connect_stops_to_streets_utm(G_c, stops)
     
     del(G_c)
-    print(f'Число узлов: {G_combined.number_of_nodes()}\n'
-            f'Число ребер: {G_combined.number_of_edges()}\n'
-            'Соединение завершено')
+    print(f'Number of nodes: {G_combined.number_of_nodes()}\n'
+            f'Number of edges: {G_combined.number_of_edges()}\n'
+            'Connecting stops to streets complete')
     
     #Сохранение узлов и ребер графа в csv
     if save_to_csv:
