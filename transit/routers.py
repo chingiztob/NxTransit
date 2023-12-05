@@ -166,6 +166,7 @@ def single_source_time_dependent_dijkstra(graph, source, start_time):
 
     return arrival_times, predecessors, travel_times
 
+# Not used
 def single_source_time_dependent_dijkstra_merged(graph, source, start_time):
     """
     Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.

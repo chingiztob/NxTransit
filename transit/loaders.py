@@ -1,5 +1,8 @@
 import os
+import time
+import multiprocessing as mp
 
+import numpy as np
 import pandas as pd
 import networkx as nx
 import geopandas as gpd
@@ -7,7 +10,7 @@ import osmnx as ox
 from shapely.geometry import Point, LineString
 
 from .converters import parse_time_to_seconds
-from .connectors import connect_stops_to_streets, _fill_coordinates, connect_stops_to_streets_utm
+from .connectors import  _fill_coordinates, connect_stops_to_streets_utm
 
 
 def _preprocess_schedules(graph):
@@ -18,10 +21,13 @@ def _preprocess_schedules(graph):
             edge[2]['sorted_schedules'] = sorted(edge[2]['schedules'], 
                                                  key=lambda x: x[0])
 
-def _add_edges_to_graph(G: nx.MultiDiGraph, sorted_stop_times: pd.DataFrame, 
-                                        trips_df: pd.DataFrame, shapes: dict,
-                                        trip_to_shape_map: dict, 
-                                        read_shapes: bool = False):
+def _add_edges_to_graph(G: nx.MultiDiGraph, 
+                        sorted_stop_times: pd.DataFrame, 
+                        trips_df: pd.DataFrame, 
+                        shapes: dict,
+                        trip_to_shape_map: dict, 
+                        read_shapes: bool = False
+                        ):
     """
     Adds edges with schedule information and optionally shape geometry between stops to the graph.
 
@@ -67,9 +73,34 @@ def _add_edges_to_graph(G: nx.MultiDiGraph, sorted_stop_times: pd.DataFrame,
         # Иначе создаем новое ребро
         else:
             if read_shapes:
-                G.add_edge(*edge, schedules=[schedule_info], type='transit', geometry=geometry)
+                G.add_edge(*edge, schedules=[schedule_info], 
+                           type='transit', geometry=geometry)
             else:
                 G.add_edge(*edge, schedules=[schedule_info], type='transit')
+
+def add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map):
+    """
+    Adds edges to the graph for a chunk of trips.
+
+    Args:
+    -----
+    - graph: The graph to which edges will be added.
+    - trips_chunk: A subset of trips data.
+    - trips_df: DataFrame with trips information.
+    - shapes: Geometries of the shapes.
+    - read_shapes: Flag indicating whether to read shapes.
+    - trip_to_shape_map: Mapping of trip_ids to shape_ids.
+    """
+    local_graph = graph.copy()  # Make a copy of the graph for local modifications
+    for trip_id, group in trips_chunk.groupby('trip_id'):
+        sorted_group = group.sort_values('stop_sequence')
+        _add_edges_to_graph(local_graph, 
+                            sorted_group, 
+                            trips_df = trips_df, 
+                            shapes = shapes, 
+                            read_shapes = read_shapes,
+                            trip_to_shape_map = trip_to_shape_map)
+    return local_graph
 
 def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, duration_seconds: int):
     """Filters stop_times to only include trips that occur within a specified time window."""
@@ -83,6 +114,7 @@ def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, du
 def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, duration_seconds, read_shapes = False):
     """
     Загружает данные GTFS из заданного пути каталога и возвращает граф, а также датафрейм остановок.
+    Функция использует параллельные вычисления для ускорения загрузки данных.
     
     Args:
     ---------
@@ -120,27 +152,30 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
                          usecols=['route_id', 
                                   'route_short_name'])
     
-    # Загрузка файла shapes.txt и сгруппированной геометрии 
+    # Load shapes.txt if read_shapes is True
     if read_shapes:
+        if 'shapes.txt' not in os.listdir(GTFSpath):
+            raise FileNotFoundError('shapes.txt not found')
+        
         shapes_df = pd.read_csv(os.path.join(GTFSpath, "shapes.txt"))
         
-        # Группировка геометрии по shape_id, получается Pandas Series 
-        # с ключами trip_id и значениями геометрии LineString
+        # Group geometry by shape_id, resulting in a Pandas Series
+        # with trip_id keys and LineString geometries as values
         shapes = shapes_df.groupby('shape_id').apply(
             lambda group: LineString(group[['shape_pt_lon', 'shape_pt_lat']].values)
             )
-
+        # Mapping trip_id to shape_id for faster lookup
         trip_to_shape_map = trips_df.set_index('trip_id')['shape_id'].to_dict()
         
     else:
         shapes = None
         trip_to_shape_map = None
   
-    # Присоединение информации о маршрутах к trips
+    # Join route information to trips
     trips_df = trips_df.merge(routes, on='route_id')
     
-    # Проверка наличия файла calendar.txt в каталоге GTFS
-    # При наличии выполняется фильтрация по дню недели, при отсутствии загружаются все данные
+    # Check if calendar.txt exists in GTFS directory
+    # If it does, filter by day of the week, otherwise raise an error
     if 'calendar.txt' in os.listdir(GTFSpath):
         calendar_df = pd.read_csv(os.path.join(GTFSpath, "calendar.txt"))
         # Filter for the day of the week
@@ -150,15 +185,14 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
         raise FileNotFoundError('calendar.txt not found')
         #print('calendar.txt not found, loading all data')
     
-    # Фильтрация только тех рейсов из файла 'stop_time.txt'
-    # которые функционируют в указанный день недели и временной период
+    # Filter stop_times to only include trips that occur within a specified time window
     valid_trips = stop_times_df['trip_id'].isin(trips_df['trip_id'])
     stop_times_df = stop_times_df[valid_trips].dropna()
 
-    # Перевод HH:MM:SS в секунды с полуночи
+    # Convert departure_time from HH:MM:SS o seconds
     departure_time_seconds = parse_time_to_seconds(departure_time_input)
     
-    # Выборка только тех рейсов, которые соответствуют указанному временному окну
+    # Filtering stop_times by time window
     filtered_stops = _filter_stop_times_by_time(stop_times_df, 
                                                 departure_time_seconds, 
                                                 duration_seconds
@@ -166,7 +200,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
 
     print(f'GTFS data loaded\n{len(filtered_stops)} of {len(stop_times_df)} trips retained')
 
-    # Добавление узлов в граф с координатами остановок
+    # Adding stops as nodes to the graph
     for _, stop in stops_df.iterrows():
         G.add_node(stop['stop_id'], 
                    type = 'transit', 
@@ -174,24 +208,58 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
                    x=stop['stop_lon'], 
                    y=stop['stop_lat']
                    )
-    
-    # Разбиение всех trips на группы по trip_id, далее итеративная обработка каждой группы
-    # Для каждой группы сортировка по stop_sequence, далее добавление ребер в граф
-    for trip_id, group in filtered_stops.groupby('trip_id'):
-        sorted_group = group.sort_values('stop_sequence')
-        _add_edges_to_graph(G, 
-                            sorted_group, 
-                            trips_df = trips_df, 
-                            shapes = shapes, 
-                            read_shapes = read_shapes,
-                            trip_to_shape_map = trip_to_shape_map)
         
-    # Предварительная сортировка расписаний для ускоренного поиска при помощи бинарного поиска
-    _preprocess_schedules(G) 
+    # Track time for benchmarking
+    timestamp = time.time()
+    # Divide filtered_stops into chunks for parallel processing
+    num_cores = int(mp.cpu_count() / 2)
+    chunks = np.array_split(filtered_stops, num_cores)
+
+    # Create a pool of processes
+    with mp.Pool(processes=num_cores) as pool:
+        # Create a subgraph in each process
+        # Each process will return a graph with edges for a subset of trips
+        # The results will be combined into a single graph
+        results = pool.starmap(add_edges_parallel, 
+                               [
+                                (G, chunk, trips_df, shapes, 
+                                read_shapes, trip_to_shape_map) 
+                                for chunk in chunks
+                                ]
+                            )
+    
+    # Merge results from all processes
+    merged_graph = nx.DiGraph()
+    
+    for graph in results:
+        merged_graph.add_nodes_from(graph.nodes(data=True))
+    # Add edges from subgraphs to the merged graph    
+    for graph in results:
+        for u, v, data in graph.edges(data=True):
+            # If edge already exists, merge schedules
+            if merged_graph.has_edge(u, v):
+                # Merge sorted_schedules attribute
+                existing_schedules = merged_graph[u][v]['schedules']
+                new_schedules = data['schedules']
+                merged_graph[u][v]['schedules'] = existing_schedules + new_schedules
+            # If edge does not exist, add it
+            else:
+                # Add new edge with data
+                merged_graph.add_edge(u, v, **data)
+    
+    print(f'Building graph in parallel complete in {time.time() - timestamp} seconds')
+    
+    # Deprecated as this solution leads to some edges attributes being overwritten
+    """ # Combine results from all processes
+    for result_graph in results:
+        G = nx.compose(G, result_graph) """
+        
+    # Sorting schedules for faster lookup using binary search
+    _preprocess_schedules(merged_graph)
     
     print('Transit graph created')
         
-    return G, stops_df
+    return merged_graph, stops_df
 
 def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
     """
@@ -306,10 +374,10 @@ def feed_to_graph(
     if save_to_csv:
         
         df = pd.DataFrame(G_combined.edges(data=True))
-        df.to_csv(rf'd:\Python_progs\Output\Edges_G4.csv', index=False)
+        df.to_csv(rf'd:\Python_progs\Output\Edges_G5.csv', index=False)
 
         df_nodes = pd.DataFrame(G_combined.nodes(data=True))
-        df_nodes.to_csv(rf'd:\Python_progs\Output\Nodes_G4.csv', index=False)
+        df_nodes.to_csv(rf'd:\Python_progs\Output\Nodes_G5.csv', index=False)
 
         del(df, df_nodes)
     
