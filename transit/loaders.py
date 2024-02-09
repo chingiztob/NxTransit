@@ -36,6 +36,7 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
     sorted_stop_times (pd.DataFrame): A DataFrame containing sorted stop times information.
     trips_df (pd.DataFrame): A DataFrame containing trip information, including shape_id.
     shapes (dict): A dictionary mapping shape_ids to their respective linestring geometries.
+    trip_to_shape_map (dict): A dictionary mapping trip_ids to shape_ids.
     read_shapes (bool): If True, shape geometries will be added to the edges. Defaults to True.
     """
     # Для каждой последовательности остановок в группе создается ребро с расписанием
@@ -160,7 +161,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
         shapes_df = pd.read_csv(os.path.join(GTFSpath, "shapes.txt"))
         
         # Group geometry by shape_id, resulting in a Pandas Series
-        # with trip_id keys and LineString geometries as values
+        # with trip_id (shape_id ?) as keys and LineString geometries as values
         shapes = shapes_df.groupby('shape_id').apply(
             lambda group: LineString(group[['shape_pt_lon', 'shape_pt_lat']].values)
             )
@@ -212,6 +213,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
     # Track time for benchmarking
     timestamp = time.time()
     # Divide filtered_stops into chunks for parallel processing
+    # Use half of the available CPU logical cores (likely equal to the number of physical cores)
     num_cores = int(mp.cpu_count() / 2)
     chunks = np.array_split(filtered_stops, num_cores)
 
@@ -247,6 +249,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
                 # Add new edge with data
                 merged_graph.add_edge(u, v, **data)
     
+    #print ('holy pepperoni, this was hard')
     print(f'Building graph in parallel complete in {time.time() - timestamp} seconds')
     
     # Deprecated as this solution leads to some edges attributes being overwritten
@@ -316,6 +319,7 @@ def feed_to_graph(
     output_graph_path = None, 
     save_graphml = False, 
     load_graphml = False, 
+    save_folder = None
     ) -> nx.DiGraph:
     """
     Создает мультимодальный граф, на основе данных о 
@@ -374,10 +378,10 @@ def feed_to_graph(
     if save_to_csv:
         
         df = pd.DataFrame(G_combined.edges(data=True))
-        df.to_csv(rf'd:\Python_progs\Output\Edges_G5.csv', index=False)
+        df.to_csv(rf'{save_folder}/Edges.csv', index=False)
 
         df_nodes = pd.DataFrame(G_combined.nodes(data=True))
-        df_nodes.to_csv(rf'd:\Python_progs\Output\Nodes_G5.csv', index=False)
+        df_nodes.to_csv(rf'{save_folder}/Nodes.csv', index=False)
 
         del(df, df_nodes)
     

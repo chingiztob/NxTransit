@@ -13,8 +13,7 @@ from .routers import single_source_time_dependent_dijkstra
 from .other import estimate_ram, bytes_to_readable
 
 
-# Функция для расчета матрицы источник-назначение между всеми остановками (БЕТА)
-def calculate_OD_matrix(graph, stops, departure_time):
+def calculate_OD_matrix(graph, stops, departure_time, output_path):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, stops, and departure time.
     
@@ -42,7 +41,8 @@ def calculate_OD_matrix(graph, stops, departure_time):
         for dest_stop in stops_list:
             if dest_stop in arrival_times:
                 # Добавление результатов в список
-                results.append({
+                results.append(
+                    {
                     'source_stop': source_stop,
                     'destination_stop': dest_stop,
                     'arrival_time': arrival_times[dest_stop],
@@ -51,7 +51,7 @@ def calculate_OD_matrix(graph, stops, departure_time):
 
     # Конвертация списка в датафрейм и в файл csv
     results_df = pd.DataFrame(results)
-    results_df.to_csv(r"D:\Python_progs\Output\results2.csv", index=False)
+    results_df.to_csv(output_path, index=False)
 
 def _calculate_OD_worker(source_stop, stops_list, graph, departure_time):
     """
@@ -67,7 +67,7 @@ def _calculate_OD_worker(source_stop, stops_list, graph, departure_time):
         'travel_time': travel_times.get(dest_stop, None)
     } for dest_stop in stops_list if dest_stop in arrival_times]
 
-def calculate_OD_matrix_parallel(graph, stops, departure_time, num_processes=2):
+def calculate_OD_matrix_parallel(graph, stops, departure_time, output_path, num_processes=2):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, 
     stops, and departure time using parallel processing.
@@ -111,8 +111,10 @@ def calculate_OD_matrix_parallel(graph, stops, departure_time, num_processes=2):
 
     with multiprocessing.Pool(processes=num_processes) as pool:
         # Фиксаця аргументов функции calculate_OD_worker
-        partial_worker = partial(_calculate_OD_worker, stops_list=stops_list, 
-                                 graph=graph, departure_time=departure_time)
+        partial_worker = partial(_calculate_OD_worker, 
+                                 stops_list=stops_list, 
+                                 graph=graph, 
+                                 departure_time=departure_time)
         results = pool.map(partial_worker, stops_list)
 
     # Группировка результатов в один список
@@ -123,7 +125,7 @@ def calculate_OD_matrix_parallel(graph, stops, departure_time, num_processes=2):
 
     # Запись результатов в файл csv
     print("Выполняется запись файла csv")
-    results_df.to_csv(r"D:\Python_progs\Output\results_3.csv", index=False)
+    results_df.to_csv(output_path, index=False)
     
     print(f"Time elapsed: {time.time() - time_start}")
     
@@ -147,7 +149,7 @@ def create_service_area(graph, source, start_time, cutoff, buffer_radius):
     """
     _, _, travel_times = single_source_time_dependent_dijkstra(graph, source, start_time)
 
-    # Фильтрация узлов, достижимых за указанное время
+    # Filter nodes that are reachable within the cutoff
     points_data = [{'node': node, 
                     'geometry': Point(
                         graph.nodes[node]['x'], 
@@ -159,12 +161,12 @@ def create_service_area(graph, source, start_time, cutoff, buffer_radius):
                    and 'x' in graph.nodes[node] 
                    and 'y' in graph.nodes[node]]
 
-    # Создание GeoDataFrame из узлов, достижимых за указанное время
+    # GeoDataFrame containing nodes reachable within the cutoff
     points_gdf = gpd.GeoDataFrame(points_data, geometry='geometry', 
                                   crs="EPSG:4326")
 
-    # Буфферизация узлов, обьединение буферов в один полигон
-    # Перевод в World Equidistant Cylindrical
+    # Nodes buffered and merged into a single polygon
+    # Reprojection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
     buffer_gdf = points_gdf.to_crs("EPSG:4087")
     buffer_gdf['geometry'] = buffer_gdf.buffer(buffer_radius)
     service_area_polygon = buffer_gdf.unary_union
@@ -213,8 +215,8 @@ def create_grid(geodataframe, cell_size):
 
 def calculate_edge_frequency(graph, start_time, end_time):
     """
-    Calculates the frequency of edges in a graph based 
-    on the schedules between start_time and end_time.
+    Calculates the frequency of edges in a graph 
+    based on the schedules between start_time and end_time.
     
     Args:
         graph (networkx.Graph): The graph containing the edges and schedules.
@@ -232,16 +234,53 @@ def calculate_edge_frequency(graph, start_time, end_time):
             seq = [(trips[i+1][0] - trips[i][0]) 
                    for i in range(len(trips)-1)
                    if trips[i][0] >= start_time and trips[i][0] <= end_time
-                ]
+                ] # list containing the headways between consecutive trips along the edge
 
             if len(seq) > 0:
                 frequency = mean(seq)
             else:
                 frequency = None
                 
-            edge[2]['frequency'] = frequency
+            edge[2]['frequency'] = frequency # mean vehicle headway in seconds along the edge
     
-            graph.nodes[edge[1]]['frequency'] = frequency
+            #graph.nodes[edge[1]]['frequency'] = frequency # mean vehicle headway in seconds at the stop
+            
+def calculate_node_frequency(graph, start_time, end_time):
+    """
+    Calculates the frequency of departures at nodes in a graph 
+    based on the schedules of adjacent edges between start_time and end_time.
+    
+    Args:
+        graph (networkx.Graph): The graph containing the nodes and adjacent edges with schedules.
+        start_time (int): The start time in seconds from midnight.
+        end_time (int): The end time in seconds from midnight.
+    
+    Returns:
+        None
+    """
+    
+    for node in graph.nodes():
+        all_times = []
+        
+        # Iterate through all edges adjacent to the current node
+        for edge in graph.edges(node, data=True):
+            if 'schedules' in edge[2]:
+
+                for schedule in edge[2]['schedules']:
+                    departure_time = schedule[0]
+                    if start_time <= departure_time <= end_time:
+                        all_times.append(departure_time)
+        
+        all_times.sort()
+        # Calculate the headways between consecutive departures (or arrivals ?)
+        headways = [(all_times[i+1] - all_times[i]) for i in range(len(all_times)-1)]
+
+        if len(headways) > 0:
+            frequency = mean(headways)
+        else:
+            frequency = None
+
+        graph.nodes[node]['frequency'] = frequency
 
 def validate_feed(gtfs_path: str) -> bool:
     """
