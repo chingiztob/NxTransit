@@ -7,6 +7,7 @@ import pandas as pd
 import osmnx as ox
 import folium
 
+# Not updated
 def plot_path_browser(graph, stops: pd.DataFrame):
     """
     Plots the given graph and stops on a folium map and opens it in a web browser.
