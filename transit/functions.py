@@ -242,8 +242,6 @@ def calculate_edge_frequency(graph, start_time, end_time):
                 frequency = None
                 
             edge[2]['frequency'] = frequency # mean vehicle headway in seconds along the edge
-    
-            #graph.nodes[edge[1]]['frequency'] = frequency # mean vehicle headway in seconds at the stop
             
 def calculate_node_frequency(graph, start_time, end_time):
     """
@@ -259,28 +257,31 @@ def calculate_node_frequency(graph, start_time, end_time):
         None
     """
     
-    for node in graph.nodes():
+    for node_view in graph.nodes(data = True):
+        node = node_view[0]
         all_times = []
         
-        # Iterate through all edges adjacent to the current node
-        for edge in graph.edges(node, data=True):
-            if 'schedules' in edge[2]:
+        if node_view[1]['type'] == 'transit':
 
-                for schedule in edge[2]['schedules']:
-                    departure_time = schedule[0]
-                    if start_time <= departure_time <= end_time:
-                        all_times.append(departure_time)
-        
-        all_times.sort()
-        # Calculate the headways between consecutive departures (or arrivals ?)
-        headways = [(all_times[i+1] - all_times[i]) for i in range(len(all_times)-1)]
+            # Iterate through all edges adjacent to the current node
+            for edge in graph.edges(node, data=True):
+                if 'schedules' in edge[2]:
 
-        if len(headways) > 0:
-            frequency = mean(headways)
-        else:
-            frequency = None
+                    for schedule in edge[2]['schedules']:
+                        departure_time = schedule[0]
+                        if start_time <= departure_time <= end_time:
+                            all_times.append(departure_time)
+            
+            all_times.sort()
+            # Calculate the headways between consecutive departures (or arrivals ?)
+            headways = [(all_times[i+1] - all_times[i]) for i in range(len(all_times)-1)]
 
-        graph.nodes[node]['frequency'] = frequency
+            if len(headways) > 0:
+                frequency = mean(headways)
+            else:
+                frequency = None
+
+            graph.nodes[node]['frequency'] = frequency
 
 def validate_feed(gtfs_path: str) -> bool:
     """

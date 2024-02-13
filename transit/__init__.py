@@ -1,7 +1,7 @@
-'''
+"""
 Package for creating multimodal graph of city transit system
-and performing time-depedent calculations using GTFS data
-'''
+and performing time-depedent calculations using GTFS dat
+"""
 
 from transit.routers import time_dependent_dijkstra, single_source_time_dependent_dijkstra
 

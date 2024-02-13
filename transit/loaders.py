@@ -112,7 +112,7 @@ def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, du
         (stop_times['departure_time_seconds'] <= departure_time + duration_seconds)
     ]
 
-def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, duration_seconds, read_shapes = False):
+def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, duration_seconds, read_shapes = False, multiprocessing = False):
     """
     Загружает данные GTFS из заданного пути каталога и возвращает граф, а также датафрейм остановок.
     Функция использует параллельные вычисления для ускорения загрузки данных.
@@ -144,14 +144,12 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
                                          'trip_id', 
                                          'stop_id', 
                                          'stop_sequence', 
-                                         'arrival_time'
-                                         ])
+                                         'arrival_time'])
     
     trips_df = pd.read_csv(os.path.join(GTFSpath, "trips.txt"))
     
     routes = pd.read_csv(os.path.join(GTFSpath, "routes.txt"), 
-                         usecols=['route_id', 
-                                  'route_short_name'])
+                         usecols=['route_id', 'route_short_name'])
     
     # Load shapes.txt if read_shapes is True
     if read_shapes:
@@ -212,57 +210,77 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
         
     # Track time for benchmarking
     timestamp = time.time()
-    # Divide filtered_stops into chunks for parallel processing
-    # Use half of the available CPU logical cores (likely equal to the number of physical cores)
-    num_cores = int(mp.cpu_count() / 2)
-    chunks = np.array_split(filtered_stops, num_cores)
+    if multiprocessing:
+        
+        print('Building graph in parallel')
+        # Divide filtered_stops into chunks for parallel processing
+        # Use half of the available CPU logical cores (likely equal to the number of physical cores)
+        num_cores = int(mp.cpu_count() / 2)
+        chunks = np.array_split(filtered_stops, num_cores)
 
-    # Create a pool of processes
-    with mp.Pool(processes=num_cores) as pool:
-        # Create a subgraph in each process
-        # Each process will return a graph with edges for a subset of trips
-        # The results will be combined into a single graph
-        results = pool.starmap(add_edges_parallel, 
-                               [
-                                (G, chunk, trips_df, shapes, 
-                                read_shapes, trip_to_shape_map) 
-                                for chunk in chunks
-                                ]
-                            )
-    
-    # Merge results from all processes
-    merged_graph = nx.DiGraph()
-    
-    for graph in results:
-        merged_graph.add_nodes_from(graph.nodes(data=True))
-    # Add edges from subgraphs to the merged graph    
-    for graph in results:
-        for u, v, data in graph.edges(data=True):
-            # If edge already exists, merge schedules
-            if merged_graph.has_edge(u, v):
-                # Merge sorted_schedules attribute
-                existing_schedules = merged_graph[u][v]['schedules']
-                new_schedules = data['schedules']
-                merged_graph[u][v]['schedules'] = existing_schedules + new_schedules
-            # If edge does not exist, add it
-            else:
-                # Add new edge with data
-                merged_graph.add_edge(u, v, **data)
-    
-    #print ('holy pepperoni, this was hard')
-    print(f'Building graph in parallel complete in {time.time() - timestamp} seconds')
-    
-    # Deprecated as this solution leads to some edges attributes being overwritten
-    """ # Combine results from all processes
-    for result_graph in results:
-        G = nx.compose(G, result_graph) """
+        # Create a pool of processes
+        with mp.Pool(processes=num_cores) as pool:
+            # Create a subgraph in each process
+            # Each process will return a graph with edges for a subset of trips
+            # The results will be combined into a single graph
+            results = pool.starmap(add_edges_parallel, 
+                                [(G, chunk, trips_df, shapes,
+                                  read_shapes, trip_to_shape_map) for chunk in chunks
+                                 ])
         
-    # Sorting schedules for faster lookup using binary search
-    _preprocess_schedules(merged_graph)
-    
-    print('Transit graph created')
+        # Merge results from all processes
+        merged_graph = nx.DiGraph()
         
-    return merged_graph, stops_df
+        for graph in results:
+            merged_graph.add_nodes_from(graph.nodes(data=True))
+        # Add edges from subgraphs to the merged graph    
+        for graph in results:
+            for u, v, data in graph.edges(data=True):
+                # If edge already exists, merge schedules
+                if merged_graph.has_edge(u, v):
+                    # Merge sorted_schedules attribute
+                    existing_schedules = merged_graph[u][v]['schedules']
+                    new_schedules = data['schedules']
+                    merged_graph[u][v]['schedules'] = existing_schedules + new_schedules
+                # If edge does not exist, add it
+                else:
+                    # Add new edge with data
+                    merged_graph.add_edge(u, v, **data)
+   
+        print(f'Building graph in parallel complete in {time.time() - timestamp} seconds')
+        
+        # Deprecated as this solution leads to some edges attributes being overwritten
+                # Combine results from all processes
+                #for result_graph in results:
+                #    G = nx.compose(G, result_graph)
+            
+        # Sorting schedules for faster lookup using binary search
+        _preprocess_schedules(merged_graph)
+        
+        print('Transit graph created')
+            
+        return merged_graph, stops_df
+    
+    else:
+        
+        print('Building graph in a single process')
+        # Разбиение всех trips на группы по trip_id, далее итеративная обработка каждой группы
+        # Для каждой группы сортировка по stop_sequence, далее добавление ребер в граф
+        for trip_id, group in filtered_stops.groupby('trip_id'):
+            sorted_group = group.sort_values('stop_sequence')
+            _add_edges_to_graph(G, 
+                                sorted_group, 
+                                trips_df = trips_df, 
+                                shapes = shapes, 
+                                read_shapes = read_shapes,
+                                trip_to_shape_map = trip_to_shape_map)
+            
+        # Sorting schedules for faster lookup using binary search
+        _preprocess_schedules(G)
+        
+        print('Transit graph created')
+            
+        return G, stops_df
 
 def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
     """
@@ -313,13 +331,12 @@ def feed_to_graph(
     departure_time_input: str, 
     day_of_week: str, 
     duration_seconds: int, 
-    save_to_csv: bool = False, 
-    read_shapes = False, 
+    read_shapes = False,
+    multiprocessing = False, 
     input_graph_path = None, 
     output_graph_path = None, 
     save_graphml = False, 
     load_graphml = False, 
-    save_folder = None
     ) -> nx.DiGraph:
     """
     Создает мультимодальный граф, на основе данных о 
@@ -331,7 +348,6 @@ def feed_to_graph(
     - departure_time_input (str): Время отправления в формате 'HH:MM:SS'.
     - day_of_week (str): День недели в нижнем регистре (например, 'monday').
     - duration_seconds (int): Период с момента отправления, для которого будет загружен граф.
-    - save_to_csv (bool): Флаг сохранения узлов и ребер графа в csv.
     - read_shapes (bool, optional): Флаг чтения геометрии из файла shapes.txt.
     - input_graph_path (str, optional): Путь к файлу с графом OSM в формате GraphML.
     - output_graph_path (str, optional): Путь для сохранения графа OSM в формате GraphML.
@@ -345,7 +361,7 @@ def feed_to_graph(
     """
     G_transit, stops = _load_GTFS(GTFSpath, departure_time_input, 
                                   day_of_week, duration_seconds, 
-                                  read_shapes = read_shapes)
+                                  read_shapes = read_shapes, multiprocessing = multiprocessing)
     
     if load_graphml:
         print('Loading OSM graph from GraphML file')
@@ -373,16 +389,5 @@ def feed_to_graph(
     print(f'Number of nodes: {G_combined.number_of_nodes()}\n'
             f'Number of edges: {G_combined.number_of_edges()}\n'
             'Connecting stops to streets complete')
-    
-    #Сохранение узлов и ребер графа в csv
-    if save_to_csv:
-        
-        df = pd.DataFrame(G_combined.edges(data=True))
-        df.to_csv(rf'{save_folder}/Edges.csv', index=False)
-
-        df_nodes = pd.DataFrame(G_combined.nodes(data=True))
-        df_nodes.to_csv(rf'{save_folder}/Nodes.csv', index=False)
-
-        del(df, df_nodes)
     
     return G_combined, stops
