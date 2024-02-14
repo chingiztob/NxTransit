@@ -6,10 +6,12 @@ from statistics import mean
 
 import pandas as pd
 import geopandas as gpd
+import tqdm
+
 from shapely.geometry import Point, Polygon
 from pympler import asizeof
 
-from .routers import single_source_time_dependent_dijkstra
+from .routers import time_dependent_dijkstra ,single_source_time_dependent_dijkstra
 from .other import estimate_ram, bytes_to_readable
 
 
@@ -387,3 +389,86 @@ def validate_feed(gtfs_path: str) -> bool:
     else:
         print("GTFS feed is valid.")
         return True
+
+def unpack_path_vertices(path):
+    """
+    This function separates pedestrian segments 
+    of given path into list of lists
+    """
+    
+    pedestrian_path = []
+    current_sublist = []
+    
+    for vertex in path:
+        if isinstance(vertex, int):
+            current_sublist.append(vertex)
+            
+        elif current_sublist:
+            pedestrian_path.append(current_sublist)
+            current_sublist = []
+    
+    if current_sublist:
+        pedestrian_path.append(current_sublist)
+        
+    return pedestrian_path
+
+def calculate_pedestrian_time(pedestrian_path, graph):
+    """
+    Calculate total impedance (travel time) for pedestrian paths by summing up the edge weights.
+
+    """
+    impedance = 0
+    for subpath in pedestrian_path:
+        for i in range(len(subpath) - 1):
+            start_node = subpath[i]
+            end_node = subpath[i+1]
+            
+            impedance += graph[start_node][end_node]['weight']
+            
+    return impedance
+
+def reconstruct_path(target, predecessors):
+    """
+    Reconstruct path from predecessors dictionary
+    """
+    
+    path = []
+    current_node = target
+
+    while current_node is not None:
+        path.insert(0, current_node)
+        
+        current_node = predecessors.get(current_node)
+        
+    return path
+
+def separate_travel_times(graph, predecessors: dict, travel_times: dict, source) -> pd.DataFrame:
+    """
+    Separate the travel times into transit time and pedestrian time for each node in the graph.
+
+    Args:
+        graph (networkx.DiGraph): The graph representing the transit network.
+        predecessors (dict): A dictionary containing the predecessors of each node in the graph.
+        travel_times (dict): A dictionary containing the travel times for each node in the graph.
+        source: The source node from which to calculate the travel times.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the transit time and pedestrian time for each node.
+    """
+    
+    results = []
+    
+    for node in tqdm.tqdm(graph.nodes(data = True)):
+        
+        if node[0] != source:
+
+            path = reconstruct_path(node[0], predecessors)
+            pedestrian_path = unpack_path_vertices(path)
+            pedestrian_time = calculate_pedestrian_time(pedestrian_path, graph)
+            
+            transit_time = travel_times[node[0]] - pedestrian_time
+
+            results.append({'node': node[0], 'transit_time': transit_time, 'pedestrian_time': pedestrian_time})
+        
+    results = pd.DataFrame(results)
+    return results
