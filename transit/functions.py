@@ -11,7 +11,7 @@ import tqdm
 from shapely.geometry import Point, Polygon
 from pympler import asizeof
 
-from .routers import time_dependent_dijkstra ,single_source_time_dependent_dijkstra
+from .routers import single_source_time_dependent_dijkstra, single_source_time_dependent_dijkstra_hashed
 from .other import estimate_ram, bytes_to_readable
 
 
@@ -55,13 +55,20 @@ def calculate_OD_matrix(graph, stops, departure_time, output_path):
     results_df = pd.DataFrame(results)
     results_df.to_csv(output_path, index=False)
 
-def _calculate_OD_worker(source_stop, stops_list, graph, departure_time):
+def _calculate_OD_worker(source_stop, stops_list, graph, departure_time, hash_table=None):
     """
     Internal worker function to calculate the OD matrix for a single source stop.
     """
-    arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-        graph, source_stop, departure_time
-        )
+    
+    if hash_table:
+        arrival_times, _, travel_times = single_source_time_dependent_dijkstra_hashed(
+            graph, source_stop, departure_time, hash_table
+            )
+    else:
+        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
+            graph, source_stop, departure_time
+            )
+        
     return [{
         'source_stop': source_stop,
         'destination_stop': dest_stop,
@@ -69,7 +76,7 @@ def _calculate_OD_worker(source_stop, stops_list, graph, departure_time):
         'travel_time': travel_times.get(dest_stop, None)
     } for dest_stop in stops_list if dest_stop in arrival_times]
 
-def calculate_OD_matrix_parallel(graph, stops, departure_time, output_path, num_processes=2):
+def calculate_OD_matrix_parallel(graph, stops, departure_time, output_path, num_processes=2, hash_table=None):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, 
     stops, and departure time using parallel processing.
@@ -116,7 +123,8 @@ def calculate_OD_matrix_parallel(graph, stops, departure_time, output_path, num_
         partial_worker = partial(_calculate_OD_worker, 
                                  stops_list=stops_list, 
                                  graph=graph, 
-                                 departure_time=departure_time)
+                                 departure_time=departure_time,
+                                 hash_table=hash_table)
         results = pool.map(partial_worker, stops_list)
 
     # Группировка результатов в один список
@@ -472,3 +480,25 @@ def separate_travel_times(graph, predecessors: dict, travel_times: dict, source)
         
     results = pd.DataFrame(results)
     return results
+
+def process_graph_to_hash_table(graph):
+    """
+    Process a graph and convert it into a hash table
+    mapping edges to their sorted schedules or static weights.
+
+    Args:
+        graph (networkx.Graph): The input graph.
+
+    Returns:
+        dict: A hash table representing the processed graph.
+    """
+    schedules_hash = {}
+    for from_node, to_node, data in graph.edges(data=True):
+        if 'sorted_schedules' in data:
+            schedules_hash[(from_node, to_node)] = data['sorted_schedules']
+        else:
+            # Static weight wrapped in a list of tuples to make it iterable
+            static_weight = data['weight']
+            schedules_hash[(from_node, to_node)] = [(static_weight,)]  # comma is to make it a tuple
+            
+    return schedules_hash
