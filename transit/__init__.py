@@ -9,8 +9,6 @@ from transit.loaders import feed_to_graph
 
 from transit.functions import *
 
-from transit.other import plot_path_browser
-
 from transit.converters import parse_seconds_to_time, parse_time_to_seconds
 
 from transit.connectors import snap_points_to_network

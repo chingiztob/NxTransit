@@ -23,7 +23,7 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
     Connects GTFS stops to the nearest street node in the graph
     using rectangular UTM coordinates.
     """
-    # Создание списка кортежей узлов улиц (x, y, node_id)
+    # Create a list of street node tuples (x, y, node_id)
     node_data = [(data['UTM_X'], data['UTM_Y'], n) 
                  for n, data in graph.nodes(data=True) 
                  if 'UTM_X' in data and 'UTM_Y' in data 
@@ -34,8 +34,8 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
                     if 'y' in data and 'x' in data 
                     and data['type'] == 'street']
     
-    # Создание KD-дерева для решения задачи поиска ближайшего соседа
-    # Дерево создается из списка кортежей узлов улиц (x, y, node_id)
+    # Create a KD-tree for nearest neighbor search
+    # The tree is created from a list of street node tuples (x, y, node_id)
     tree = cKDTree([(x, y) for x, y, _ in node_data])
     
     for _, stop in stops.iterrows():
@@ -44,13 +44,13 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
         x, y = graph.nodes[stop['stop_id']]['UTM_X'], graph.nodes[stop['stop_id']]['UTM_Y']
         stop_coords = (x, y)   
         
-        # query возращает расстояние до ближайшего соседа и его индекс в дереве
+        # query returns the distance to the nearest neighbor and its index in the tree
         distance, idx = tree.query(stop_coords)
         nearest_street_node = node_data[idx][2]
 
-        # Добавляем соединительное ребро в граф
-        # Соединение происходит только если найденный узел является улицей
-        # Возможно эта дополнительная проверка и не нужна
+        # Add a connector edge to the graph
+        # The connection only happens if the found node is a street
+        # Maybe this additional check is not needed
         if graph.nodes[nearest_street_node]['type'] == 'street':  # Соединение 
             
             # Создаем геометрию ребра в формате Shapely LineString
@@ -59,12 +59,10 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
             linestring = shapely.geometry.LineString([stop_geom, street_geom])
 
             walk_speed_mps = 1.39
-            # На данный момент при расчете используется некорректное расстояние в градусах
-            # Впрочем влияние на результат незначительно
-            # Когда-нибудь будет переделано с UTM
+            # Currently, the incorrect degree distance is used for the calculation
+            # Will be redone with UTM
             walk_time = distance / walk_speed_mps
     
-            # Заполняем атрибуты ребра
             graph.add_edge(stop['stop_id'], nearest_street_node,
                            weight=walk_time,
                            type='connector',
@@ -118,14 +116,14 @@ def snap_points_to_network(graph, points):
     ----------
     - graph: NetworkX graph with added snapped points as nodes.
     """
-    # Создание списка кортежей узлов улиц (x, y, node_id)
+    # Create a list of street node tuples (x, y, node_id)
     node_data = [(data['x'], data['y'], n) 
                  for n, data in graph.nodes(data=True) 
                  if 'y' in data and 'x' in data 
                  and data['type'] == 'street']
 
-    # Создание KD-дерева для решения задачи поиска ближайшего соседа
-    # Дерево создается из списка кортежей узлов улиц (x, y, node_id)
+    # Create a KD-tree for nearest neighbor search
+    # The tree is created from a list of street node tuples (x, y, node_id)
     tree = cKDTree([(lon, lat) for lon, lat, _ in node_data])
     
     for index, row in points.iterrows():
@@ -134,15 +132,14 @@ def snap_points_to_network(graph, points):
         id = row['id']
         pnt_coords = (geometry.x, geometry.y)
         
-        # query возращает расстояние до ближайшего соседа и его индекс в дереве
+        # query returns the distance to the nearest neighbor and its index in the tree
         distance, idx = tree.query(pnt_coords)
         nearest_street_node = node_data[idx][2]
 
-        # Добавляем ребро коннектор в граф
-        # Соединение происходит только если найденный узел 
-        # является улицей (дополнительная проверка)
-        # Возможно она и не нужна
-        if graph.nodes[nearest_street_node]['type'] == 'street':  # Соединение 
+        # Add a connector edge to the graph
+        # The connection only happens if the found node is a street
+        # Maybe this additional check is not needed
+        if graph.nodes[nearest_street_node]['type'] == 'street':
             
             # Создаем геометрию ребра в формате Shapely LineString
             street_geom = shapely.geometry.Point((node_data[idx][0], 
@@ -150,13 +147,13 @@ def snap_points_to_network(graph, points):
             linestring = shapely.geometry.LineString([geometry, street_geom])
 
             walk_speed_mps = 1.39
-            # На данный момент при расчете используется некорректное расстояние
-            # Будет переделано с UTM
+            
+            # Currently, the incorrect degree distance is used for the calculation
+            # Will be redone with UTM
             walk_time = distance / walk_speed_mps
             
             graph.add_node(id, x=geometry.x, y=geometry.y, type='snapped')
     
-            # Заполняем атрибуты ребра
             graph.add_edge(id, nearest_street_node,
                            weight=walk_time,
                            type='connector',

@@ -38,11 +38,11 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
     - trip_to_shape_map (dict): A dictionary mapping trip_ids to shape_ids.
     - read_shapes (bool): If True, shape geometries will be added to the edges. Defaults to True.
     """
-    # Для каждой последовательности остановок в группе создается ребро с расписанием
-    # Если ребро между остановками существует, то добавляется расписание к существующему ребру
-
-    # Предобработка с созданием словаря trip_id -> shape_id с целью
-    # Избежать повторного поиска shape_id по датафрейму для каждого рейса
+    # For each pair of consecutive stops in the group (trip), create an edge with schedule information
+    # If the edge already exists, add the schedule to the list of schedules
+    
+    # Uses trip_id -> shape_id mapping to add shape geometry to the edge
+    # In order to avoid searching the shapes DataFrame for each trip_id
 
     for i in range(len(sorted_stop_times) - 1):
         start_stop = sorted_stop_times.iloc[i]

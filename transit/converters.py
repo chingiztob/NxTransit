@@ -10,8 +10,8 @@ def parse_time_to_seconds(time_str: str) -> int:
         parts = time_str.split(':')
         if len(parts) != 3:
             raise ValueError("Time string must be in 'HH:MM:SS' format.")
-
-        # Допустимы значения часов до 48, чтобы учесть автобусы после полуночи
+        
+        # Allowed hours up to 48 to account for trips after midnight
         h, m, s = map(int, parts)
         if not (0 <= h < 48 and 0 <= m < 60 and 0 <= s < 60):
             raise ValueError("Hours must be in 0-25, minutes and seconds must be in 0-59.")
