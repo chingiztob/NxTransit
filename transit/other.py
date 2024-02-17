@@ -40,8 +40,14 @@ def plot_path_browser(graph, stops: pd.DataFrame):
 def estimate_ram():
     """
     This function estimates the total and free physical memory available on a Windows based system.
-    :return: A tuple containing the total and free physical memory in bytes.
-    :raises: OSError if the function is called on a non-Windows based system or if the memory retrieval fails.
+    
+    Returns: 
+    ----------
+        A tuple containing the total and free physical memory in bytes.
+        
+    Raises: 
+    ----------
+        OSError if the function is called on a non-Windows based system or if the memory retrieval fails.
     """
     if platform.system() != "Windows":
         raise OSError("This method is intended for Windows based systems.")

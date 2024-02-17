@@ -1,27 +1,26 @@
 from heapq import heappop, heappush
 import bisect
 
-from .calculate_delay import calculate_delay_hashed
-
-def calculate_delay_sorted(graph, from_node, to_node, current_time):
-    # Проверка наличия отсортированных расписаний в атрибутах текущего ребра
+def _calculate_delay_sorted(graph, from_node, to_node, current_time):
+    """
+    Calculates the delay and route for a given graph, from_node, to_node, and current_time.
+    Used in the time-dependent Dijkstra algorithm.
+    """
+    
     if 'sorted_schedules' in graph[from_node][to_node]:
         schedules = graph[from_node][to_node]['sorted_schedules']
-
         departure_times = [d[0] for d in schedules]
-        
-        #bisect проводит бинарный поиск и определяет индекс, в который нужно вставить текущее время
-        #Если индекс меньше длины списка, значит, есть отправление, которое стартует позже текущего времени
-        #иначе возвращается бесконечность
+        # Binary search to find the next departure time in the sorted list of schedules
         idx = bisect.bisect_left(departure_times, current_time)
+        # If the next departure time exists, calculate the delay and route
         if idx < len(schedules):
             next_departure, next_arrival, route = schedules[idx]
-            # Возвращается задержка от текущего времени до следующего отправления
             return next_departure - current_time + (next_arrival - next_departure), route
+        # If the next departure time does not exist, return 'inf' as the delay
         else:
-            return float('inf'), None  # Сегодня больше нет отправлений
+            return float('inf'), None
+        # If the edge does not have sorted schedules, edge is not time-dependent and has a static weight
     else:
-        # # Если в атрибутах нет расписаний - использовать постоянный вес ребра
         return graph[from_node][to_node]['weight'], None
 
 def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes = False):
@@ -30,14 +29,14 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
     """
     Finds the shortest path between two nodes in a graph using a time-dependent Dijkstra algorithm.
 
-    Args:
+    Parameters:
         graph (networkx.Graph): The graph to search for the shortest path.
         source: The starting node.
         target: The target node.
         start_time (float): The starting time.
 
     Returns:
-        tuple: A tuple containing the following elements:
+         - tuple: A tuple containing the following elements:
             - list: The shortest path from the source to the target node.
             - float: The arrival time at the target node.
             - float: The travel time from the source to the target node.
@@ -73,7 +72,7 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
         for v in graph.neighbors(u):
             # Если сосед еще не посещен
             if v not in visited:
-                delay, route = calculate_delay_sorted(graph, u, v, current_time)
+                delay, route = _calculate_delay_sorted(graph, u, v, current_time)
                 # Пропустить соседа, если время прибытия бесконечно
                 if delay == float('inf'):
                     continue
@@ -125,17 +124,17 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
             # Если путь не начинается с исходного узла, значит что-то пошло не так, путь не найден
             return [], float('inf'), -1
         
-def single_source_time_dependent_dijkstra(graph, source, start_time):
+def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     """
     Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.
 
-    Args:
+    Parameters:
         graph (networkx.DiGraph): The graph to search.
         source (hashable): The node to start the search from.
         start_time (float): The time to start the search from.
 
     Returns:
-        tuple: A tuple containing three dictionaries:
+         - tuple: A tuple containing three dictionaries:
             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
             - travel_times: A dictionary mapping each node to the travel time from the source node.
@@ -153,7 +152,7 @@ def single_source_time_dependent_dijkstra(graph, source, start_time):
         current_time, current_node = heappop(queue)
 
         for neighbor in graph.neighbors(current_node):
-            delay, _ = calculate_delay_sorted(graph, current_node, neighbor, current_time)
+            delay, _ = _calculate_delay_sorted(graph, current_node, neighbor, current_time)
             new_arrival_time = current_time + delay
 
             if new_arrival_time < arrival_times[neighbor]:
@@ -167,10 +166,16 @@ def single_source_time_dependent_dijkstra(graph, source, start_time):
 
     return arrival_times, predecessors, travel_times
 
-# Experimental implementations using hashed schedules and Cython compiled function for calculating the delay
+# Experimental implementations using hashed schedules for calculating the delay
 
-def calculate_delay_hashed_noncython(from_node, to_node, current_time, schedules_hash):
-    schedule_info = schedules_hash.get((from_node, to_node), [(float('inf'),)])  # Default to 'inf'
+def _calculate_delay_hashed(from_node, to_node, current_time, hashtable):
+    """
+    Calculates the delay and route for a given graph, from_node, to_node, and current_time.
+    Used in the time-dependent Dijkstra algorithm. 
+    This version uses a precomputed hash table for quicker access to sorted schedules.
+    """
+    
+    schedule_info = hashtable.get((from_node, to_node), [(float('inf'),)])  # Default to 'inf'
     
     # Handle static weights differently
     if isinstance(schedule_info[0], tuple) and len(schedule_info[0]) == 1:  # Check if it's a static weight
@@ -188,10 +193,11 @@ def calculate_delay_hashed_noncython(from_node, to_node, current_time, schedules
             
             return float('inf'), None
 
-def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, edges_hash):
+def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hashtable):
     """
     Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.
     This version uses a precomputed hash table for quick access to sorted schedules.
+    You can use the `process_graph_to_hash_table` function to create the hash table.
 
     Args:
         graph (networkx.DiGraph): The graph to search.
@@ -200,11 +206,14 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, edge
         schedules_hash (dict): A hash table for quick access to sorted schedules.
 
     Returns:
-        tuple: A tuple containing three dictionaries:
-            - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
-            - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
-            - travel_times: A dictionary mapping each node to the travel time from the source node.
+         - tuple: A tuple containing three dictionaries:
+             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
+             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
+             - travel_times: A dictionary mapping each node to the travel time from the source node.
     """
+    if hashtable is None:
+        raise ValueError("The hash table is required for this algorithm.")
+    
     if source not in graph:
         raise ValueError(f"The source node {source} does not exist in the graph.")
 
@@ -219,7 +228,7 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, edge
 
         for neighbor in graph.neighbors(current_node):
 
-            delay, _ = calculate_delay_hashed_noncython(current_node, neighbor, current_time, edges_hash)
+            delay, _ = _calculate_delay_hashed(current_node, neighbor, current_time, hashtable)
             new_arrival_time = current_time + delay
 
             if new_arrival_time < arrival_times[neighbor]:
@@ -231,49 +240,31 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, edge
 
     return arrival_times, predecessors, travel_times
 
-def single_source_time_dependent_dijkstra_cython(graph, source, start_time, edges_hash):
+def single_source_time_dependent_dijkstra(graph, source, start_time, hashtable = None, algorithm='sorted'):
     """
-    Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.
-    This version uses a precomputed hash table for quick access to sorted schedules 
-    and a Cython compiled function for calculating the delay.
-    
-    Non compatible with graphs with nodes that are not integers
-    -----------------------------------------------------------
+    Compute the shortest paths and travel times from a single source node to all other nodes in a time-dependent graph.
+        You can use the `process_graph_to_hash_table` function to create the hash table.
 
     Args:
-        graph (networkx.DiGraph): The graph to search.
-        source (hashable): The node to start the search from.
-        start_time (float): The time to start the search from.
-        schedules_hash (dict): A hash table for quick access to sorted schedules.
+        graph (nx.DiGraph): The time-dependent graph.
+        source (Node): The source node of the graph.
+        start_time (int): The starting time in seconds since midnight.
+        hashtable (dict, optional): A hashtable for storing precomputed values. Required for 'hashed' algorithm. 
+        
+         - algorithm (str, optional): The algorithm to use for computing shortest paths. Can be 'sorted', 'hashed'. Defaults to 'sorted'.
+             - Sorted - using binary search to find the next departure time in graph attributes (slowest)
+             - Hashed - using a precomputed hashtable for quick access to sorted schedules. Works 20 - 30% faster than 'sorted'
 
     Returns:
-        tuple: A tuple containing three dictionaries:
-            - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
-            - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
-            - travel_times: A dictionary mapping each node to the travel time from the source node.
+         - tuple: A tuple containing three dictionaries:
+             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
+             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
+             - travel_times: A dictionary mapping each node to the travel time from the source node.
     """
-    if source not in graph:
-        raise ValueError(f"The source node {source} does not exist in the graph.")
-
-    arrival_times = {node: float('inf') for node in graph.nodes}
-    predecessors = {node: None for node in graph.nodes}
-    arrival_times[source] = start_time
-    travel_times = {}
-    queue = [(start_time, source)]
-
-    while queue:
-        current_time, current_node = heappop(queue)
-
-        for neighbor in graph.neighbors(current_node):
-
-            delay, _ = calculate_delay_hashed(current_node, neighbor, current_time, edges_hash)
-            new_arrival_time = current_time + delay
-
-            if new_arrival_time < arrival_times[neighbor]:
-                arrival_times[neighbor] = new_arrival_time
-                predecessors[neighbor] = current_node
-                heappush(queue, (new_arrival_time, neighbor))
-            
-                travel_times[neighbor] = new_arrival_time - start_time
-
+    
+    if algorithm == 'sorted':
+        arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_sorted(graph, source, start_time)
+    elif algorithm == 'hashed':
+        arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hashtable)
+        
     return arrival_times, predecessors, travel_times

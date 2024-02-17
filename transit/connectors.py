@@ -109,7 +109,7 @@ def snap_points_to_network(graph, points):
     Snaps point features from GeoDataFrame to 
     the nearest street node in the graph.
     
-    Args:
+    Parameters:
     ----------
     - graph: NetworkX graph representing transit system.
     - points: GeoDataFrame containing point geometries.
