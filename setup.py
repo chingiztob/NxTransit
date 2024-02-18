@@ -15,14 +15,17 @@ setup(
         "utm",
         "tqdm",
     ],
-    version='0.1.3',
+    version='0.1.4',
     description='A package for public transit routing and analysis',
     author='chingiztob',
 )
 
 #python setup.py sdist bdist_wheel
+
 #twine upload dist/*
 #twine upload --repository testpypi dist/*
+
 #pip install --index-url https://test.pypi.org/simple/ TransitTest
+#pip install --upgrade --index-url https://test.pypi.org/simple/ TransitTest
 
 #pip install --index-url https://test.pypi.org/simple/ transit
