@@ -17,86 +17,82 @@ from .routers import time_dependent_dijkstra, single_source_time_dependent_dijks
 from .other import estimate_ram, bytes_to_readable
 
 
-def calculate_OD_matrix(graph, stops, departure_time, hashtable = None, algorithm = 'sorted'):
+def calculate_OD_matrix(graph, nodes, departure_time, hashtable=None, algorithm='sorted'):
     """
-    Calculates the Origin-Destination (OD) matrix for a given graph, stops, and departure time.
+    Calculates the Origin-Destination (OD) matrix for a given graph, nodes, and departure time.
     
     Parameters:
     ----------
     graph (networkx.Graph): The graph representing the transit network.
-    stops (pandas.DataFrame): A DataFrame containing the stops information.
+    nodes (list): A list of node IDs in the graph.
     departure_time (int): The departure time in seconds since midnight.
     
     Returns:
     ----------
     pandas.DataFrame: A DataFrame containing the OD matrix with the following columns:
-        - source_stop: The ID of the origin stop.
-        - destination_stop: The ID of the destination stop.
-        - arrival_time: The arrival time at the destination stop in seconds since midnight.
-        - travel_time: The travel time from the origin stop to the destination stop in seconds.
+        - source_node: The ID of the origin node.
+        - destination_node: The ID of the destination node.
+        - arrival_time: The arrival time at the destination node in seconds since midnight.
+        - travel_time: The travel time from the origin node to the destination node in seconds.
     """
     
-    stops_list = stops['stop_id'].tolist() #Список остановок
     results = []
 
-    for source_stop in stops_list:
-        # Вычисление времени прибытия и предшественников для каждой остановки
-        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(graph, source_stop, departure_time, 
+    for source_node in nodes:
+        # Calculate arrival times and travel times for each node using the specified algorithm
+        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(graph, source_node, departure_time, 
                                                                                     hashtable, algorithm=algorithm)
         
-        # Итерация по всем остановкам, для их отбора в результатах работы алгоритма дейкстры
-        for dest_stop in stops_list:
-            if dest_stop in arrival_times:
-                # Добавление результатов в список
+        # Iterate through all nodes to select them in the results of Dijkstra's algorithm
+        for dest_node in nodes:
+            if dest_node in arrival_times:
+                # Add results to the list
                 results.append(
                     {
-                    'source_stop': source_stop,
-                    'destination_stop': dest_stop,
-                    'arrival_time': arrival_times[dest_stop],
-                    'travel_time': travel_times.get(dest_stop, None)  # Use .get() to avoid KeyError if the key is not found
+                    'source_node': source_node,
+                    'destination_node': dest_node,
+                    'arrival_time': arrival_times[dest_node],
+                    'travel_time': travel_times.get(dest_node, None)  # Use .get() to avoid KeyError if the key is not found
                 })
 
-    # Конвертация списка в датафрейм и в файл csv
+    # Convert the list of results to a DataFrame and to a csv file
     results_df = pd.DataFrame(results)
     
     return results_df
 
-def _calculate_OD_worker(source_stop, stops_list, graph, departure_time, hashtable=None):
+def _calculate_OD_worker(source_node, nodes_list, graph, departure_time, hashtable=None):
     """
-    Internal worker function to calculate the OD matrix for a single source stop.
+    Internal worker function to calculate the OD matrix for a single source node.
     """
     
     if hashtable:
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source_stop, departure_time, hashtable, algorithm='hashed'
-            )
+            graph, source_node, departure_time, hashtable, algorithm='hashed'
+        )
     else:
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source_stop, departure_time, algorithm='sorted'
-            )
+            graph, source_node, departure_time, algorithm='sorted'
+        )
         
     return [{
-        'source_stop': source_stop,
-        'destination_stop': dest_stop,
-        'arrival_time': arrival_times[dest_stop],
-        'travel_time': travel_times.get(dest_stop, None)
-    } for dest_stop in stops_list if dest_stop in arrival_times]
+        'source_node': source_node,
+        'destination_node': dest_node,
+        'arrival_time': arrival_times[dest_node],
+        'travel_time': travel_times.get(dest_node, None)
+    } for dest_node in nodes_list if dest_node in arrival_times]
 
-def calculate_OD_matrix_parallel(graph, stops, departure_time, num_processes=2, hashtable=None):
+def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, hashtable=None):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, 
-    stops, and departure time using parallel processing.
+    nodes, and departure time using parallel processing.
     
     Parameters:
     -----------
-    graph (networkx.Graph): The graph representing the transit network.
-    stops (pandas.DataFrame): A DataFrame containing the stops information.
-    departure_time (int): The departure time in seconds since midnight.
-    num_processes (int): Number of parallel processes to use for computation.
-        Strongly reccomended to use number of processes equal 
-        to the number of physical CPU cores or less.
-    hashtable (dict): A hash table representing the processed graph.
-        hashtable can be created using process_graph_to_hash_table function.
+    - graph (networkx.Graph): The graph representing the transit network.
+    - nodes (list): A list of node IDs in the graph.
+    - departure_time (int): The departure time in seconds since midnight.
+    - num_processes (int): Number of parallel processes to use for computation.
+    - hashtable (dict): Optional hash table for the graph.
     
     Returns:
     ----------
@@ -104,40 +100,35 @@ def calculate_OD_matrix_parallel(graph, stops, departure_time, num_processes=2, 
     """
     print(f'Calculating the OD using {num_processes} processes')
     
-    # Early attempt to estimate the available memory for the computation
-    # If the memory is not enough, the process will fill all the RAM and go into an infinite calculation
+    # Assuming functions asizeof and estimate_ram are defined elsewhere to estimate RAM usage
+    # If not, remove these checks or implement equivalent functionality
     graph_size = asizeof.asizeof(graph)
     ram, free_ram = estimate_ram()
-    
-    # Empirical formula for memory estimation :)
     expected_ram = graph_size * 5 + num_processes * graph_size * 2.5
     
     if expected_ram > free_ram:
-        raise MemoryError(f'Размер графа {bytes_to_readable(graph_size)}, '
-                          f'ожидаемые затраты {expected_ram} превышают доступную '
-                          f'память {bytes_to_readable(free_ram)}')
+        raise MemoryError(f'Graph size {bytes_to_readable(graph_size)}, '
+                          f'expected costs {bytes_to_readable(expected_ram)} exceed available '
+                          f'memory {bytes_to_readable(free_ram)}')
     else:
-        print(f'Размер графа {bytes_to_readable(graph_size)}, Ожидаемые затраты '
-              f'{bytes_to_readable(expected_ram)}, доступная память '
+        print(f'Graph size {bytes_to_readable(graph_size)}, expected costs '
+              f'{bytes_to_readable(expected_ram)}, memory avaliable '
               f'{bytes_to_readable(free_ram)}')
 
-    stops_list = stops['stop_id'].tolist() #Список остановок
     results = []
-    
     time_start = time.time()
 
     with multiprocessing.Pool(processes=num_processes) as pool:
-        # Fixing the arguments of the calculate_OD_worker function
+        # Fixing the arguments of the calculate_OD_worker function for nodes list
         partial_worker = partial(_calculate_OD_worker, 
-                                 stops_list=stops_list, 
+                                 nodes_list=nodes, 
                                  graph=graph, 
                                  departure_time=departure_time,
                                  hashtable=hashtable)
-        results = pool.map(partial_worker, stops_list)
+        results = pool.map(partial_worker, nodes)
 
     # Flatten the list of lists
-    results = [item for sublist in results 
-               for item in sublist]
+    results = [item for sublist in results for item in sublist]
 
     results_df = pd.DataFrame(results)
 
