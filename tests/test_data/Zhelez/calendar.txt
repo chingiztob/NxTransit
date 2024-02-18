@@ -1,0 +1,8 @@
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+0,1,1,1,1,1,1,1,20240101,20241231
+winter_weekday,1,1,1,1,1,0,0,20240101,20241231
+winter_weekend,0,0,0,0,0,1,1,20240101,20241231
+summer_weekday,1,1,1,1,1,0,0,20240420,20241006
+all_weekend,0,0,0,0,0,1,1,20240101,20241231
+summer_week,1,1,1,1,1,1,1,20240420,20241006
+all_weekday,1,1,1,1,1,0,0,20240101,20241231

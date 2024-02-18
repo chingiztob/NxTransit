@@ -1,0 +1,9 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
+bus_6,0,6,ПАТП - Лукаши,,3,,#8dc73f,#ffffff
+bus_3,0,3,ПАТП - Решетнева,,3,,#008c44,#ffffff
+bus_1,0,1,Ленина 75 - Площадь Победы - Ленина 75,,3,,#ed1c24,#ffffff
+bus_2,0,2,Ленина 75 - КПП-1,,3,,#6ecff6,#ffffff
+bus_9,0,9,Склады - Маяк,,3,,#ffcb04,#ffffff
+bus_32,0,32,ТЭА - КПП-1,,3,,#005e9e,#ffffff
+bus_10,0,10,Ленина 75 - Мира,,3,,#a14c0c,#ffffff
+bus_44,0,44,Ленина 75 - Церковь,,3,,#f47920,#ffffff

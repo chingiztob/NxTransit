@@ -1,0 +1,2 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone
+0,МП ПАТП,http://patp26.ru/,Asia/Krasnoyarsk,ru,+73919769016
