@@ -4,7 +4,6 @@ setup(
     name='TransitTest',
     packages=find_packages(include=['transit']),
     install_requires=[
-        "folium",
         "geopandas",
         "networkx",
         "osmnx",
