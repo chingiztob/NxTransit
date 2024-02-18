@@ -206,11 +206,13 @@ def create_grid(geodataframe, cell_size):
     --------
         gpd.GeoDataFrame: Polygon grid
     """
-    geodataframe = geodataframe.to_crs("EPSG:4087")
+
+    geodataframe = geodataframe.to_crs("EPSG:4087")  # Project to metric CRS for accurate cell size
     xmin, ymin, xmax, ymax = geodataframe.total_bounds
     rows = int((ymax - ymin) / cell_size)
     cols = int((xmax - xmin) / cell_size)
     grid = []
+    ids = []  # List to hold the unique IDs
 
     for i in range(cols):
         for j in range(rows):
@@ -218,16 +220,33 @@ def create_grid(geodataframe, cell_size):
             y1 = ymin + j * cell_size
             x2 = x1 + cell_size
             y2 = y1 + cell_size
-            grid.append(Polygon([(x1, y1), (x2, y1), 
-                                 (x2, y2), (x1, y2)])
-                        )
+            grid.append(Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)]))
+            ids.append(f"grid_{i*rows + j + 1}")  # Generate unique ID
 
-    grid_geodataframe = gpd.GeoDataFrame(grid, 
-                                         columns=['geometry'], 
-                                         crs=geodataframe.crs
-                                         ).to_crs("EPSG:4326")
+    grid_geodataframe = gpd.GeoDataFrame({'id': ids, 'geometry': grid}, crs="EPSG:4087").to_crs("EPSG:4326")
     
     return grid_geodataframe
+
+def create_centroids_dataframe(polygon_gdf):
+    """
+    Creates a GeoDataFrame with the centroids of polygons from the given GeoDataFrame.
+
+    Parameters:
+    --------
+        polygon_gdf: gpd.GeoDataFrame containing polygons
+
+    Returns:
+    --------
+        gpd.GeoDataFrame: GeoDataFrame with Point geometries of the centroids
+    """
+    # Calculate centroids
+    centroids = polygon_gdf.geometry.centroid
+
+    # Create a GeoDataFrame with these centroids and include the 'origin_id' from the parent polygon
+    centroids_gdf = gpd.GeoDataFrame(polygon_gdf[['id']].copy(), geometry=centroids, crs=polygon_gdf.crs)
+    centroids_gdf.rename(columns={'id': 'origin_id'}, inplace=True)
+    
+    return centroids_gdf
 
 def edge_frequency(graph, start_time, end_time):
     """

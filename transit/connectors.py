@@ -129,7 +129,7 @@ def snap_points_to_network(graph, points):
     for index, row in points.iterrows():
         
         geometry = row['geometry']
-        id = row['id']
+        id = row['origin_id']
         pnt_coords = (geometry.x, geometry.y)
         
         # query returns the distance to the nearest neighbor and its index in the tree

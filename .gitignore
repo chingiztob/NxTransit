@@ -162,7 +162,7 @@ cython_debug/
 # Development files
 cache
 multiprocessing_tests.py
-verification_tests.py
+verification.py
 Snapping_tests.ipynb
 routers_dev.py
 dev.ipynb
