@@ -3,8 +3,8 @@ import time
 import multiprocessing as mp
 
 import numpy as np
-import pandas as pd
 import networkx as nx
+import pandas as pd
 import geopandas as gpd
 import osmnx as ox
 from shapely.geometry import Point, LineString

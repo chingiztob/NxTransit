@@ -3,6 +3,7 @@ from setuptools import find_packages, setup
 setup(
     name='TransitTest',
     packages=find_packages(include=['transit']),
+    python_requires='>=3.9',
     install_requires=[
         "geopandas>=0.14.3",
         "networkx>=3.2.1",
@@ -16,7 +17,7 @@ setup(
         "tqdm>=4.66.1",
         "utm>=0.7.0",
     ],
-    version='0.1.7',
+    version='0.1.8',
     description='Alpha version of the package for public transit routing and analysis',
     author='chingiztob',
 )

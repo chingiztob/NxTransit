@@ -43,43 +43,51 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
             - float: The arrival time at the target node.
             - float: The travel time from the source to the target node.
     """
-    # Немедленно прекратить выполнение, если исходный или целевой узел не существует в графе
+    # abort immediately if the source or target node does not exist in the graph
     if source not in graph or target not in graph:
         raise ValueError("The source or target node does not exist in the graph.")
 
-    # Инициализация времени прибытия и предшественников текущего узла в очереди
-    # Initialize arrival times and predecessors
+    # Initialize arrival times and predecessors for the current node in the queue
     arrival_times = {node: float('inf') for node in graph.nodes}
     predecessors = {node: None for node in graph.nodes}
     arrival_times[source] = start_time
     queue = [(start_time, source)]
     visited = set()
-    # Отслеживаем использованные маршруты
+    # Track used routes
     routes = {node: None for node in graph.nodes}
-
+    
+    # while the queue is not empty and the target node has not been visited
     # Пока очередь не пуста и целевой узел не посещен
     while queue:
+        # Extract the node with the smallest arrival time from the queue
         # Извлечение узла с наименьшим временем прибытия в очереди
         current_time, u = heappop(queue)
+        # If the node is the target, stop the execution
         # Если узел является целевым, прекратить выполнение
         if u == target:
             break
+        # If the node has already been visited with a better result, skip it
         # Если узел уже посещен с лучшим результатом, пропустить его
         if u in visited and current_time > arrival_times[u]:
             continue
+        # Add the node to the visited set to avoid visiting it again
         # Добавить узел в список посещенных, чтобы не посещать его снова
         visited.add(u)
 
-        # Перебор всех соседей узла
+        # Iterate over all neighbors of the node
         for v in graph.neighbors(u):
+            # If the neighbor has not been visited yet
             # Если сосед еще не посещен
             if v not in visited:
                 delay, route = _calculate_delay_sorted(graph, u, v, current_time)
+                # Skip the neighbor if the arrival time is infinite
                 # Пропустить соседа, если время прибытия бесконечно
                 if delay == float('inf'):
                     continue
+                # Calculate the new arrival time for the neighbor
                 # Вычисление нового времени прибытия для соседа
                 new_arrival_time = current_time + delay
+                # If the new arrival time is better, update the arrival time and predecessor
                 # Если новое время прибытия лучше, обновить время прибытия и предшественника
                 if new_arrival_time < arrival_times[v]:
                     arrival_times[v] = new_arrival_time
@@ -87,8 +95,10 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
                     if track_used_routes:
                         routes[v] = route
 
+                    # Assign the current node U as the predecessor of the neighbor V (in the loop)
                     # Назначиить текущий узел U (в очереди) предшественником соседа V (в цикле)
                     predecessors[v] = u
+                    # Add the neighbor to the queue with the new arrival time
                     # Добавить соседа в очередь с новым временем прибытия
                     heappush(queue, (new_arrival_time, v))
 
@@ -105,17 +115,17 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
 
     if track_used_routes:
         if path[0] == source:
-            # Пустое множество для отслеживания использованных маршрутов
+            # Empty set to track used routes
             used_routes = set()
-            # Итерация по всем узлам пути
+            # Iterate over all nodes in the path
             for i in range(len(path) - 1):
                 u = path[i]
                 v = path[i + 1]
-                # Добавление маршрута, используемого для перехода от узла U к узлу V
+                # Add route, used to go from node U to node V
                 used_routes.add(routes[v])
             return path, arrival_times[target], travel_time, used_routes
         else:
-            # Если путь не начинается с исходного узла, значит что-то пошло не так, путь не найден
+            # If the path does not start with the source node, something went wrong, the path was not found
             return [], float('inf'), -1, set()
 
     else:
@@ -123,7 +133,7 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
         if path[0] == source:
             return path, arrival_times[target], travel_time
         else:
-            # Если путь не начинается с исходного узла, значит что-то пошло не так, путь не найден
+            # If the path does not start with the source node, something went wrong, the path was not found
             return [], float('inf'), -1
 
 

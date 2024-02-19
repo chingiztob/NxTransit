@@ -160,15 +160,15 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     _, _, travel_times = single_source_time_dependent_dijkstra(graph, source, start_time, hashtable, algorithm)
 
     # Filter nodes that are reachable within the cutoff
-    points_data = [{'node': node, 
+    points_data = [{'node': node,
                     'geometry': Point(
-                        graph.nodes[node]['x'], 
+                        graph.nodes[node]['x'],
                         graph.nodes[node]['y']
-                        ), 
+                        ),
                     'travel_time': time}
-                   for node, time in travel_times.items() 
-                   if time <= cutoff 
-                   and 'x' in graph.nodes[node] 
+                   for node, time in travel_times.items()
+                   if time <= cutoff
+                   and 'x' in graph.nodes[node]
                    and 'y' in graph.nodes[node]]
 
     # GeoDataFrame containing nodes reachable within the cutoff
