@@ -35,30 +35,31 @@ def calculate_OD_matrix(graph, nodes, departure_time, hashtable=None, algorithm=
         - arrival_time: The arrival time at the destination node in seconds since midnight.
         - travel_time: The travel time from the origin node to the destination node in seconds.
     """
-    
+
     results = []
 
     for source_node in nodes:
         # Calculate arrival times and travel times for each node using the specified algorithm
-        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(graph, source_node, departure_time, 
-                                                                                    hashtable, algorithm=algorithm)
-        
+        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(graph, source_node, departure_time,
+                                                                               hashtable, algorithm=algorithm)
+
         # Iterate through all nodes to select them in the results of Dijkstra's algorithm
         for dest_node in nodes:
             if dest_node in arrival_times:
                 # Add results to the list
                 results.append(
                     {
-                    'source_node': source_node,
-                    'destination_node': dest_node,
-                    'arrival_time': arrival_times[dest_node],
-                    'travel_time': travel_times.get(dest_node, None)  # Use .get() to avoid KeyError if the key is not found
-                })
+                     'source_node': source_node,
+                     'destination_node': dest_node,
+                     'arrival_time': arrival_times[dest_node],
+                     'travel_time': travel_times.get(dest_node, None)  # Use .get() to avoid KeyError if the key is not found
+                     })
 
     # Convert the list of results to a DataFrame and to a csv file
     results_df = pd.DataFrame(results)
-    
+
     return results_df
+
 
 def _calculate_OD_worker(source_node, nodes_list, graph, departure_time, hashtable=None):
     """
@@ -80,6 +81,7 @@ def _calculate_OD_worker(source_node, nodes_list, graph, departure_time, hashtab
         'arrival_time': arrival_times[dest_node],
         'travel_time': travel_times.get(dest_node, None)
     } for dest_node in nodes_list if dest_node in arrival_times]
+
 
 def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, hashtable=None):
     """
@@ -136,6 +138,7 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
     
     return results_df
 
+
 def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = 'sorted', hashtable=None):
     """
     Creates a service area by buffering around all points within a travel time cutoff.
@@ -184,6 +187,7 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
 
     return service_area_gdf, points_gdf
 
+
 def create_grid(geodataframe, cell_size):
     """
     Creates a grid within the bounding box of a GeoDataFrame.
@@ -218,6 +222,7 @@ def create_grid(geodataframe, cell_size):
     
     return grid_geodataframe
 
+
 def create_centroids_dataframe(polygon_gdf):
     """
     Creates a GeoDataFrame with the centroids of polygons from the given GeoDataFrame.
@@ -239,58 +244,60 @@ def create_centroids_dataframe(polygon_gdf):
     
     return centroids_gdf
 
+
 def edge_frequency(graph, start_time, end_time):
     """
     Calculates the frequency of edges in a graph 
     based on the schedules between start_time and end_time.
-    
+ 
     Parameters:
     --------
         graph (networkx.Graph): The graph containing the edges and schedules.
         start_time (int): The start time in seconds from midnight.
         end_time (int): The end time in seconds from midnight.
-    
+
     Returns:
     --------
         None
     """
-    
+
     for edge in graph.edges(data = True):
         if 'schedules' in edge[2]:
-            
+
             trips = edge[2]['sorted_schedules']
             seq = [(trips[i+1][0] - trips[i][0]) 
                    for i in range(len(trips)-1)
                    if trips[i][0] >= start_time and trips[i][0] <= end_time
-                ] # list containing the headways between consecutive trips along the edge
+                   ]  # list containing the headways between consecutive trips along the edge
 
             if len(seq) > 0:
                 frequency = mean(seq)
             else:
                 frequency = None
-                
-            edge[2]['frequency'] = frequency # mean vehicle headway in seconds along the edge
-            
+
+            edge[2]['frequency'] = frequency  # mean vehicle headway in seconds along the edge
+
+
 def node_frequency(graph, start_time, end_time):
     """
     Calculates the frequency of departures at nodes in a graph 
     based on the schedules of adjacent edges between start_time and end_time.
-    
+
     Parameters:
     --------
         graph (networkx.Graph): The graph containing the nodes and adjacent edges with schedules.
         start_time (int): The start time in seconds from midnight.
         end_time (int): The end time in seconds from midnight.
-    
+
     Returns:
     --------
         None
     """
-    
-    for node_view in graph.nodes(data = True):
+
+    for node_view in graph.nodes(data=True):
         node = node_view[0]
         all_times = []
-        
+
         if node_view[1]['type'] == 'transit':
 
             # Iterate through all edges adjacent to the current node
@@ -301,10 +308,11 @@ def node_frequency(graph, start_time, end_time):
                         departure_time = schedule[0]
                         if start_time <= departure_time <= end_time:
                             all_times.append(departure_time)
-            
+
             all_times.sort()
-            # Calculate the headways between consecutive departures (or arrivals ?)
-            headways = [(all_times[i+1] - all_times[i]) for i in range(len(all_times)-1)]
+            # Calculate the headways between consecutive departures (arrivals?)
+            headways = [(all_times[i+1] - all_times[i])
+                        for i in range(len(all_times)-1)]
 
             if len(headways) > 0:
                 frequency = mean(headways)
@@ -312,6 +320,7 @@ def node_frequency(graph, start_time, end_time):
                 frequency = None
 
             graph.nodes[node]['frequency'] = frequency
+
 
 def validate_feed(gtfs_path: str) -> bool:
     """
@@ -400,7 +409,7 @@ def validate_feed(gtfs_path: str) -> bool:
             print("Blank departure or arrival times found in stop_times.txt.")
 
         # Validate time format (HH:MM:SS)
-        time_format_regex = r'^(\d{2}):([0-5]\d):([0-5]\d)$' #check for HH:MM:SS format
+        time_format_regex = r'^(\d{2}):([0-5]\d):([0-5]\d)$'  # check for HH:MM:SS format
         invalid_departure_times = stop_times_df[~stop_times_df['departure_time'].str.match(time_format_regex)]
         invalid_arrival_times = stop_times_df[~stop_times_df['arrival_time'].str.match(time_format_regex)]
 
@@ -419,6 +428,7 @@ def validate_feed(gtfs_path: str) -> bool:
     else:
         print("GTFS feed is valid.")
         return True
+
 
 def _unpack_path_vertices(path):
     """
@@ -442,6 +452,7 @@ def _unpack_path_vertices(path):
         
     return pedestrian_path
 
+
 def _calculate_pedestrian_time(pedestrian_path, graph):
     """
     Calculate total impedance (travel time) for pedestrian paths by summing up the edge weights.
@@ -457,20 +468,22 @@ def _calculate_pedestrian_time(pedestrian_path, graph):
             
     return impedance
 
+
 def _reconstruct_path(target, predecessors):
     """
     Reconstruct path from predecessors dictionary
     """
-    
+
     path = []
     current_node = target
 
     while current_node is not None:
         path.insert(0, current_node)
-        
+
         current_node = predecessors.get(current_node)
-        
+
     return path
+
 
 def separate_travel_times(graph, predecessors: dict, travel_times: dict, source) -> pd.DataFrame:
     """
@@ -505,6 +518,7 @@ def separate_travel_times(graph, predecessors: dict, travel_times: dict, source)
     results = pd.DataFrame(results)
     return results
 
+
 def process_graph_to_hash_table(graph):
     """
     Process a graph and convert it into a hash table
@@ -525,9 +539,12 @@ def process_graph_to_hash_table(graph):
         else:
             # Static weight wrapped in a list of tuples to make it iterable
             static_weight = data['weight']
-            schedules_hash[(from_node, to_node)] = [(static_weight,)]  # comma is to make it a tuple
-            
+            schedules_hash[(from_node, to_node)] = [
+                (static_weight,)
+            ]  # comma is to make it a tuple
+
     return schedules_hash
+
 
 def last_service(graph):
     """
@@ -544,23 +561,25 @@ def last_service(graph):
     """
     for node, data in graph.nodes(data=True):
         if data['type'] == 'transit':
-            last_service_time = float('-inf')  # Initialize with a very early time 
+            last_service_time = float('-inf')
 
             for _, _, edge_data in graph.edges(node, data=True):
                 if 'sorted_schedules' in edge_data:
-                    # Get the last arrival and departure times from the sorted schedules
-                    edge_last_arrival = edge_data['sorted_schedules'][-1][0]
-                    edge_last_departure = edge_data['sorted_schedules'][-1][1]
-                    # Update the last service time if the current edge has a later service time
-                    
-                    last_service_time = max(last_service_time, edge_last_arrival, edge_last_departure)
-            
+                    # Get the last arrival and departure times
+                    # from the sorted schedules
+                    last_arrival = edge_data['sorted_schedules'][-1][0]
+                    last_departure = edge_data['sorted_schedules'][-1][1]
+                    # Update the last service time if the current edge
+                    # has a later service time
+                    last_service_time = max(last_service_time, last_arrival, last_departure)
+
             # if the stop is not serviced, set last_service_time to None
             if last_service_time == float('-inf'):
                 last_service_time = None
 
             data['last_service'] = last_service_time
-            
+
+
 def connectivity_frequency(graph, source, target, start_time, end_time, sampling_interval=60):
     """
     Calculates the connectivity frequency between a source and target node in a graph
@@ -582,7 +601,9 @@ def connectivity_frequency(graph, source, target, start_time, end_time, sampling
     """
     travel_parameters = [graph, source, target]
     func = partial(time_dependent_dijkstra, *travel_parameters)
-    data = [(start_time, func(start_time)[1]) for start_time in range(start_time, end_time, sampling_interval)]
+    data = [(start_time, func(start_time)[1]) for start_time
+            in range(start_time, end_time, sampling_interval)
+            ]
 
     # Convert the travel times to a numpy array
     time_values = np.array([float(item[1]) for item in data])
@@ -601,8 +622,9 @@ def connectivity_frequency(graph, source, target, start_time, end_time, sampling
 
     # Calculate the mean interval between the peaks
     mean_interval_between_peaks = np.mean(intervals)
-    
+
     return mean_interval_between_peaks
+
 
 def single_source_connectivity_frequency(graph, source, start_time, end_time, sampling_interval=60, hashtable=None, algorithm='sorted'):
     """
@@ -625,35 +647,37 @@ def single_source_connectivity_frequency(graph, source, start_time, end_time, sa
 
     # Iterate over each sampling interval
     for current_time in range(start_time, end_time, sampling_interval):
-        _, _, travel_times = single_source_time_dependent_dijkstra(graph, source, current_time,
-                                                                hashtable=hashtable, algorithm=algorithm
-                                                                )  
+        _, _, travel_times = single_source_time_dependent_dijkstra(
+            graph, source, current_time,
+            hashtable=hashtable, algorithm=algorithm
+        )
 
         # Update travel times for each node
-        for node, time in travel_times.items():
+        for node, travel_time in travel_times.items():
             # Add the current time to the list of travel times for the node
             if node not in node_to_intervals:
                 node_to_intervals[node] = []
-            node_to_intervals[node].append(time)
-    
+            node_to_intervals[node].append(travel_time)
+
     # Calculate mean interval between peaks for each node
     # Node_to_interval contains the travel times list for each node
     for node, times in node_to_intervals.items():
         if len(times) > 1:
             time_array = np.array(times)
-            
+
             # Calculate the first and second derivatives of the travel times
             # to find the peaks
             derivative = np.gradient(time_array)
             second_derivative = np.gradient(derivative)
             peaks, _ = scipy.signal.find_peaks(np.abs(second_derivative))
-            
+
             # If there are peaks, calculate the intervals between them
             if len(peaks) > 1:
                 intervals = np.diff(peaks) * sampling_interval
                 mean_interval = np.mean(intervals)
                 node_to_intervals[node] = mean_interval
-            # If there are no peaks, set the interval to NaN (pedestrian-only paths)
+            # If there are no peaks, set the interval to NaN
+            # (pedestrian-only paths)
             else:
                 node_to_intervals[node] = np.nan
         else:

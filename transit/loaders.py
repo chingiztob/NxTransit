@@ -10,7 +10,7 @@ import osmnx as ox
 from shapely.geometry import Point, LineString
 
 from .converters import parse_time_to_seconds
-from .connectors import  _fill_coordinates, connect_stops_to_streets_utm
+from .connectors import _fill_coordinates, connect_stops_to_streets_utm
 
 
 def _preprocess_schedules(graph):
@@ -20,11 +20,12 @@ def _preprocess_schedules(graph):
             edge[2]['sorted_schedules'] = sorted(edge[2]['schedules'], 
                                                  key=lambda x: x[0])
 
-def _add_edges_to_graph(G: nx.MultiDiGraph, 
-                        sorted_stop_times: pd.DataFrame, 
-                        trips_df: pd.DataFrame, 
+
+def _add_edges_to_graph(G: nx.MultiDiGraph,
+                        sorted_stop_times: pd.DataFrame,
+                        trips_df: pd.DataFrame,
                         shapes: dict,
-                        trip_to_shape_map: dict, 
+                        trip_to_shape_map: dict,
                         read_shapes: bool = False
                         ):
     """
@@ -38,7 +39,8 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
     - trip_to_shape_map (dict): A dictionary mapping trip_ids to shape_ids.
     - read_shapes (bool): If True, shape geometries will be added to the edges. Defaults to True.
     """
-    # For each pair of consecutive stops in the group (trip), create an edge with schedule information
+    # For each pair of consecutive stops in the group (trip),
+    # create an edge with schedule information
     # If the edge already exists, add the schedule to the list of schedules
     
     # Uses trip_id -> shape_id mapping to add shape geometry to the edge
@@ -48,13 +50,17 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
         start_stop = sorted_stop_times.iloc[i]
         end_stop = sorted_stop_times.iloc[i + 1]
         edge = (start_stop['stop_id'], end_stop['stop_id'])
-        
+
         departure = parse_time_to_seconds(start_stop['departure_time'])
         arrival = parse_time_to_seconds(end_stop['arrival_time'])
         trip_id = start_stop['trip_id']
-        
-        # Getting route_id from trips_df (searching by trip_id in trips_df and selecting route_id column)
-        route_id = trips_df.loc[trips_df['trip_id'] == trip_id, 'route_id'].values[0]
+
+        # Getting route_id from trips_df
+        # (searching by trip_id in trips_df and selecting route_id column)
+        route_id = trips_df.loc[trips_df['trip_id'] 
+                                == trip_id, 'route_id'
+                                ].values[0]
+
         schedule_info = (departure, arrival, route_id)
 
         geometry = None
@@ -64,7 +70,7 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
                 geometry = shapes[shape_id]
             else:
                 pass
-        
+
         # if edge already exists, add schedule to the list of schedules
         # Currently the geometry is added to the first edge found
 
@@ -73,36 +79,39 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
         # Create a new edge otherwise
         else:
             if read_shapes:
-                G.add_edge(*edge, schedules=[schedule_info], 
+                G.add_edge(*edge, schedules=[schedule_info],
                            type='transit', geometry=geometry)
             else:
                 G.add_edge(*edge, schedules=[schedule_info], type='transit')
+
 
 def add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map):
     """
     Adds edges to the graph for a chunk of trips.
     """
-    local_graph = graph.copy()  # Make a copy of the graph for local modifications
-    for trip_id, group in trips_chunk.groupby('trip_id'):
+    local_graph = graph.copy()  # Make a copy for local modifications
+    for trip_id, group in trips_chunk.groupby(['trip_id']):
         sorted_group = group.sort_values('stop_sequence')
-        _add_edges_to_graph(local_graph, 
-                            sorted_group, 
-                            trips_df = trips_df, 
-                            shapes = shapes, 
-                            read_shapes = read_shapes,
-                            trip_to_shape_map = trip_to_shape_map)
+        _add_edges_to_graph(local_graph,
+                            sorted_group,
+                            trips_df=trips_df,
+                            shapes=shapes,
+                            read_shapes=read_shapes,
+                            trip_to_shape_map=trip_to_shape_map)
     return local_graph
+
 
 def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, duration_seconds: int):
     """Filters stop_times to only include trips that occur within a specified time window."""
-    
+
     stop_times['departure_time_seconds'] = stop_times['departure_time'].apply(parse_time_to_seconds)
     return stop_times[
         (stop_times['departure_time_seconds'] >= departure_time) &
         (stop_times['departure_time_seconds'] <= departure_time + duration_seconds)
     ]
 
-def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, duration_seconds, read_shapes = False, multiprocessing = False):
+
+def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, duration_seconds, read_shapes=False, multiprocessing=False):
     """
     Loads GTFS data from the specified directory path and returns a graph and a dataframe of stops.
     The function uses parallel processing to speed up data loading.
@@ -124,28 +133,28 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
     # Initialize the graph and read data files.
     G = nx.DiGraph()
 
-    stops_df = pd.read_csv(os.path.join(GTFSpath, "stops.txt"), 
+    stops_df = pd.read_csv(os.path.join(GTFSpath, "stops.txt"),
                            usecols=['stop_id', 'stop_lat', 'stop_lon'])
-    
-    stop_times_df = pd.read_csv(os.path.join(GTFSpath, "stop_times.txt"), 
-                                usecols=['departure_time', 
-                                         'trip_id', 
-                                         'stop_id', 
-                                         'stop_sequence', 
+
+    stop_times_df = pd.read_csv(os.path.join(GTFSpath, "stop_times.txt"),
+                                usecols=['departure_time',
+                                         'trip_id',
+                                         'stop_id',
+                                         'stop_sequence',
                                          'arrival_time'])
-    
+
     trips_df = pd.read_csv(os.path.join(GTFSpath, "trips.txt"))
-    
+
     routes = pd.read_csv(os.path.join(GTFSpath, "routes.txt"), 
                          usecols=['route_id', 'route_short_name'])
-    
+
     # Load shapes.txt if read_shapes is True
     if read_shapes:
         if 'shapes.txt' not in os.listdir(GTFSpath):
             raise FileNotFoundError('shapes.txt not found')
-        
+
         shapes_df = pd.read_csv(os.path.join(GTFSpath, "shapes.txt"))
-        
+
         # Group geometry by shape_id, resulting in a Pandas Series
         # with trip_id (shape_id ?) as keys and LineString geometries as values
         shapes = shapes_df.groupby('shape_id').apply(
@@ -153,14 +162,14 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
             )
         # Mapping trip_id to shape_id for faster lookup
         trip_to_shape_map = trips_df.set_index('trip_id')['shape_id'].to_dict()
-        
+
     else:
         shapes = None
         trip_to_shape_map = None
-  
+
     # Join route information to trips
     trips_df = trips_df.merge(routes, on='route_id')
-    
+
     # Check if calendar.txt exists in GTFS directory
     # If it does, filter by day of the week, otherwise raise an error
     if 'calendar.txt' in os.listdir(GTFSpath):
@@ -170,8 +179,9 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
         trips_df = trips_df[trips_df['service_id'].isin(service_ids)]
     else:
         raise FileNotFoundError('calendar.txt not found')
-    
-    # Filter stop_times to only include trips that occur within a specified time window
+
+    # Filter stop_times to only include trips that occur 
+    # within a specified time window
     valid_trips = stop_times_df['trip_id'].isin(trips_df['trip_id'])
     stop_times_df = stop_times_df[valid_trips].dropna()
 
@@ -179,8 +189,8 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
     departure_time_seconds = parse_time_to_seconds(departure_time_input)
     
     # Filtering stop_times by time window
-    filtered_stops = _filter_stop_times_by_time(stop_times_df, 
-                                                departure_time_seconds, 
+    filtered_stops = _filter_stop_times_by_time(stop_times_df,
+                                                departure_time_seconds,
                                                 duration_seconds
                                                 )
 
@@ -188,20 +198,21 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
 
     # Adding stops as nodes to the graph
     for _, stop in stops_df.iterrows():
-        G.add_node(stop['stop_id'], 
-                   type = 'transit', 
-                   pos=(stop['stop_lon'], stop['stop_lat']), 
-                   x=stop['stop_lon'], 
+        G.add_node(stop['stop_id'],
+                   type='transit',
+                   pos=(stop['stop_lon'], stop['stop_lat']),
+                   x=stop['stop_lon'],
                    y=stop['stop_lat']
                    )
-        
+
     # Track time for benchmarking
     timestamp = time.time()
     if multiprocessing:
-        
+
         print('Building graph in parallel')
         # Divide filtered_stops into chunks for parallel processing
-        # Use half of the available CPU logical cores (likely equal to the number of physical cores)
+        # Use half of the available CPU logical cores
+        # (likely equal to the number of physical cores)
         num_cores = int(mp.cpu_count() / 2)
         chunks = np.array_split(filtered_stops, num_cores)
 
@@ -210,17 +221,17 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
             # Create a subgraph in each process
             # Each process will return a graph with edges for a subset of trips
             # The results will be combined into a single graph
-            results = pool.starmap(add_edges_parallel, 
-                                [(G, chunk, trips_df, shapes,
-                                  read_shapes, trip_to_shape_map) for chunk in chunks
-                                 ])
-        
+            results = pool.starmap(add_edges_parallel,
+                                   [(G, chunk, trips_df, shapes,
+                                     read_shapes, trip_to_shape_map) for chunk in chunks
+                                    ])
+
         # Merge results from all processes
         merged_graph = nx.DiGraph()
-        
+
         for graph in results:
             merged_graph.add_nodes_from(graph.nodes(data=True))
-        # Add edges from subgraphs to the merged graph    
+        # Add edges from subgraphs to the merged graph 
         for graph in results:
             for u, v, data in graph.edges(data=True):
                 # If edge already exists, merge schedules
@@ -233,41 +244,37 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
                 else:
                     # Add new edge with data
                     merged_graph.add_edge(u, v, **data)
-   
+
         print(f'Building graph in parallel complete in {time.time() - timestamp} seconds')
-        
-        # Deprecated as this solution leads to some edges attributes being overwritten
-                # Combine results from all processes
-                #for result_graph in results:
-                #    G = nx.compose(G, result_graph)
-            
+
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(merged_graph)
-        
+
         print('Transit graph created')
-            
+
         return merged_graph, stops_df
-    
+
     else:
-        
+
         print('Building graph in a single process')
         # Splitting trips into groups by trip_id, then iteratively processing each group
         # For each group, sort by stop_sequence, then add edges to the graph
         for trip_id, group in filtered_stops.groupby('trip_id'):
             sorted_group = group.sort_values('stop_sequence')
-            _add_edges_to_graph(G, 
-                                sorted_group, 
-                                trips_df = trips_df, 
-                                shapes = shapes, 
+            _add_edges_to_graph(G,
+                                sorted_group,
+                                trips_df = trips_df,
+                                shapes = shapes,
                                 read_shapes = read_shapes,
                                 trip_to_shape_map = trip_to_shape_map)
-            
+
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(G)
-        
+
         print('Transit graph created')
-            
+
         return G, stops_df
+
 
 def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
     """
@@ -281,18 +288,17 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
     """
     # Building a convex hull from stop coordinates for OSM loading
     boundary = gpd.GeoSeries(
-                            [Point(lon, lat) for lon, lat 
-                            in zip(stops['stop_lon'], stops['stop_lat'])
-                            ]
-                            ).unary_union.convex_hull
-    
+        [Point(lon, lat) for lon, lat
+         in zip(stops['stop_lon'], stops['stop_lat'])
+         ]).unary_union.convex_hull
+
     print('Loading OSM graph via OSMNX')
     # Loading OSM data within the convex hull
-    G_city = ox.graph_from_polygon(boundary, 
-                                   network_type='walk', 
+    G_city = ox.graph_from_polygon(boundary,
+                                   network_type='walk',
                                    simplify=True)
     print('Street network graph created')
-    
+
     # Adding walking times on streets
     walk_speed_mps = 1.39  # 5кмч
     for _, _, _, data in G_city.edges(data=True, keys = True):
@@ -300,28 +306,29 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
         walk_time = distance / walk_speed_mps
         data['weight'] = walk_time
         data['type'] = 'street'
-    
+
     for _, data in G_city.nodes(data = True):
         data['type'] = 'street'
-    
+
     if save_graphml:
         ox.save_graphml(G_city, path)
-        
+
     # Convert MultiDiGraph from OSMNX to DiGraph
     G_city = nx.DiGraph(G_city)
-    
+
     return G_city
- 
+
+
 def feed_to_graph(
     GTFSpath: str, 
-    departure_time_input: str, 
-    day_of_week: str, 
-    duration_seconds: int, 
+    departure_time_input: str,
+    day_of_week: str,
+    duration_seconds: int,
     read_shapes: bool = False,
-    multiprocessing: bool = False, 
-    input_graph_path: str = None, 
-    output_graph_path: str = None, 
-    save_graphml: bool = False, 
+    multiprocessing: bool = False,
+    input_graph_path: str = None,
+    output_graph_path: str = None,
+    save_graphml: bool = False,
     load_graphml: bool = False,
 ) -> tuple[nx.DiGraph, pd.DataFrame]:
     """
@@ -357,10 +364,11 @@ def feed_to_graph(
     stops : pd.DataFrame
         DataFrame with information about the stops.
     """
-    G_transit, stops = _load_GTFS(GTFSpath, departure_time_input, 
-                                  day_of_week, duration_seconds, 
-                                  read_shapes=read_shapes, multiprocessing=multiprocessing)
-    
+    G_transit, stops = _load_GTFS(GTFSpath, departure_time_input,
+                                  day_of_week, duration_seconds,
+                                  read_shapes=read_shapes,
+                                  multiprocessing=multiprocessing)
+
     if load_graphml:
         print('Loading OSM graph from GraphML file')
         # Dictionary with data types for edges
@@ -370,20 +378,20 @@ def feed_to_graph(
     else:
         # Import OSM data
         G_city = _load_osm(stops, save_graphml, output_graph_path)
-    
+
     # Combining OSM and GTFS data
     G_combined = nx.compose(G_transit, G_city)
     del G_transit, G_city
 
     # Filling UTM coordinates for graph nodes
     _fill_coordinates(G_combined)
-    
+
     print("Combining graphs")
     # Connecting stops to OSM streets
     G_combined = connect_stops_to_streets_utm(G_combined, stops)
-    
+
     print(f'Number of nodes: {G_combined.number_of_nodes()}\n'
           f'Number of edges: {G_combined.number_of_edges()}\n'
           'Connecting stops to streets complete')
-    
+
     return G_combined, stops

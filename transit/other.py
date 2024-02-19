@@ -1,24 +1,25 @@
 import ctypes
 import platform
 
-#https://systemweakness.com/how-to-use-the-win32api-with-python3-3adde999211b
+
+# https://systemweakness.com/how-to-use-the-win32api-with-python3-3adde999211b
 def estimate_ram():
     """
     This function estimates the total and free physical memory available on a Windows based system.
-    
-    Returns: 
+
+    Returns:
     ----------
         A tuple containing the total and free physical memory in bytes.
-        
-    Raises: 
+
+    Raises:
     ----------
         OSError if the function is called on a non-Windows based system or if the memory retrieval fails.
     """
     if platform.system() != "Windows":
         raise OSError("This method is intended for Windows based systems.")
-    
+
     kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
-    
+
     # Function to retrieve system memory information
     class MEMORYSTATUSEX(ctypes.Structure):
         _fields_ = [
@@ -35,7 +36,7 @@ def estimate_ram():
 
     mem_info = MEMORYSTATUSEX()
     mem_info.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-    
+
     if kernel32.GlobalMemoryStatusEx(ctypes.byref(mem_info)) == 0:
         error_code = ctypes.get_last_error()
         raise OSError(f"GlobalMemoryStatusEx failed with error code {error_code}")
@@ -44,6 +45,7 @@ def estimate_ram():
     free_memory = mem_info.ullAvailPhys
 
     return total_memory, free_memory
+
 
 # Convert bytes to human-readable format (e.g., MB or GB)
 def bytes_to_readable(bytes):

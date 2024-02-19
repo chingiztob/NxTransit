@@ -1,5 +1,6 @@
 import time
 
+
 def parse_time_to_seconds(time_str: str) -> int:
     """Converts a time string to the number of seconds since midnight.
     """
@@ -10,7 +11,7 @@ def parse_time_to_seconds(time_str: str) -> int:
         parts = time_str.split(':')
         if len(parts) != 3:
             raise ValueError("Time string must be in 'HH:MM:SS' format.")
-        
+
         # Allowed hours up to 48 to account for trips after midnight
         h, m, s = map(int, parts)
         if not (0 <= h < 48 and 0 <= m < 60 and 0 <= s < 60):
@@ -23,6 +24,7 @@ def parse_time_to_seconds(time_str: str) -> int:
 
     except Exception as e:
         raise ValueError(f"An error occurred while parsing the time: {e}")
+
 
 def parse_seconds_to_time(seconds: int) -> str:
     """Converts the number of seconds since midnight to a time string."""

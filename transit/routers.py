@@ -1,12 +1,13 @@
 from heapq import heappop, heappush
 import bisect
 
+
 def _calculate_delay_sorted(graph, from_node, to_node, current_time):
     """
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
     Used in the time-dependent Dijkstra algorithm.
     """
-    
+
     if 'sorted_schedules' in graph[from_node][to_node]:
         schedules = graph[from_node][to_node]['sorted_schedules']
         departure_times = [d[0] for d in schedules]
@@ -23,7 +24,8 @@ def _calculate_delay_sorted(graph, from_node, to_node, current_time):
     else:
         return graph[from_node][to_node]['weight'], None
 
-def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes = False):
+
+def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes=False):
     # https://doi.org/10.1016/j.entcs.2003.12.019
     # https://bradfieldcs.com/algos/graphs/dijkstras-algorithm/
     """
@@ -54,7 +56,7 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
     visited = set()
     # Отслеживаем использованные маршруты
     routes = {node: None for node in graph.nodes}
-    
+
     # Пока очередь не пуста и целевой узел не посещен
     while queue:
         # Извлечение узла с наименьшим временем прибытия в очереди
@@ -67,7 +69,7 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
             continue
         # Добавить узел в список посещенных, чтобы не посещать его снова
         visited.add(u)
-        
+
         # Перебор всех соседей узла
         for v in graph.neighbors(u):
             # Если сосед еще не посещен
@@ -81,10 +83,10 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
                 # Если новое время прибытия лучше, обновить время прибытия и предшественника
                 if new_arrival_time < arrival_times[v]:
                     arrival_times[v] = new_arrival_time
-                    
+
                     if track_used_routes:
                         routes[v] = route
-                    
+
                     # Назначиить текущий узел U (в очереди) предшественником соседа V (в цикле)
                     predecessors[v] = u
                     # Добавить соседа в очередь с новым временем прибытия
@@ -100,14 +102,14 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
     path.reverse()
 
     travel_time = arrival_times[target] - start_time
-    
+
     if track_used_routes:
         if path[0] == source:
             # Пустое множество для отслеживания использованных маршрутов
             used_routes = set()
             # Итерация по всем узлам пути
             for i in range(len(path) - 1):
-                u = path[i] # ???????
+                u = path[i]
                 v = path[i + 1]
                 # Добавление маршрута, используемого для перехода от узла U к узлу V
                 used_routes.add(routes[v])
@@ -115,15 +117,16 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
         else:
             # Если путь не начинается с исходного узла, значит что-то пошло не так, путь не найден
             return [], float('inf'), -1, set()
-        
+
     else:
-        
+
         if path[0] == source:
             return path, arrival_times[target], travel_time
         else:
             # Если путь не начинается с исходного узла, значит что-то пошло не так, путь не найден
             return [], float('inf'), -1
-        
+
+
 def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     """
     Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.
@@ -147,7 +150,7 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     arrival_times[source] = start_time
     travel_times = {}
     queue = [(start_time, source)]
-    
+
     while queue:
         current_time, current_node = heappop(queue)
 
@@ -159,39 +162,43 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
                 arrival_times[neighbor] = new_arrival_time
                 predecessors[neighbor] = current_node
                 heappush(queue, (new_arrival_time, neighbor))
-            
+
                 travel_times[neighbor] = new_arrival_time - start_time
     # Реконструкция пути не производится
     # Однако на основе 'predecessors' можно восстановить путь к любому узлу
 
     return arrival_times, predecessors, travel_times
 
+
 # Experimental implementations using hashed schedules for calculating the delay
+
 
 def _calculate_delay_hashed(from_node, to_node, current_time, hashtable):
     """
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
-    Used in the time-dependent Dijkstra algorithm. 
+    Used in the time-dependent Dijkstra algorithm.
     This version uses a precomputed hash table for quicker access to sorted schedules.
     """
-    
-    schedule_info = hashtable.get((from_node, to_node), [(float('inf'),)])  # Default to 'inf'
-    
+    # Default to 'inf'
+    schedule_info = hashtable.get((from_node, to_node), [(float('inf'),)])
+
     # Handle static weights differently
-    if isinstance(schedule_info[0], tuple) and len(schedule_info[0]) == 1:  # Check if it's a static weight
+    # Check if it's a static weight
+    if isinstance(schedule_info[0], tuple) and len(schedule_info[0]) == 1:
         return schedule_info[0][0], None  # Return the static weight
-    
+
     else:
         departure_times = [d[0] for d in schedule_info]
         idx = bisect.bisect_left(departure_times, current_time)
-        
+
         if idx < len(schedule_info):
-            
+
             next_departure, next_arrival, route = schedule_info[idx]
             return next_departure - current_time + (next_arrival - next_departure), route
         else:
-            
+
             return float('inf'), None
+
 
 def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hashtable):
     """
@@ -213,7 +220,7 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
     """
     if hashtable is None:
         raise ValueError("The hash table is required for this algorithm.")
-    
+
     if source not in graph:
         raise ValueError(f"The source node {source} does not exist in the graph.")
 
@@ -235,10 +242,11 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
                 arrival_times[neighbor] = new_arrival_time
                 predecessors[neighbor] = current_node
                 heappush(queue, (new_arrival_time, neighbor))
-            
+
                 travel_times[neighbor] = new_arrival_time - start_time
 
     return arrival_times, predecessors, travel_times
+
 
 def single_source_time_dependent_dijkstra(graph, source, start_time, hashtable = None, algorithm='sorted'):
     """
@@ -249,8 +257,8 @@ def single_source_time_dependent_dijkstra(graph, source, start_time, hashtable =
         graph (nx.DiGraph): The time-dependent graph.
         source (Node): The source node of the graph.
         start_time (int): The starting time in seconds since midnight.
-        hashtable (dict, optional): A hashtable for storing precomputed values. Required for 'hashed' algorithm. 
-        
+        hashtable (dict, optional): A hashtable for storing precomputed values. Required for 'hashed' algorithm.
+
          - algorithm (str, optional): The algorithm to use for computing shortest paths. Can be 'sorted', 'hashed'. Defaults to 'sorted'.
              - Sorted - using binary search to find the next departure time in graph attributes (slowest)
              - Hashed - using a precomputed hashtable for quick access to sorted schedules. Works 20 - 30% faster than 'sorted'
@@ -261,10 +269,10 @@ def single_source_time_dependent_dijkstra(graph, source, start_time, hashtable =
              - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
              - travel_times: A dictionary mapping each node to the travel time from the source node.
     """
-    
+
     if algorithm == 'sorted':
         arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_sorted(graph, source, start_time)
     elif algorithm == 'hashed':
         arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hashtable)
-        
+
     return arrival_times, predecessors, travel_times
