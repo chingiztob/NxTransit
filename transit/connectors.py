@@ -1,7 +1,7 @@
 import pandas as pd
 
 import utm
-from scipy.spatial import cKDTree
+from scipy.spatial import KDTree
 import shapely.geometry
 
 
@@ -38,7 +38,7 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
 
     # Create a KD-tree for nearest neighbor search
     # The tree is created from a list of street node tuples (x, y, node_id)
-    tree = cKDTree([(x, y) for x, y, _ in node_data])
+    tree = KDTree([(x, y) for x, y, _ in node_data])
 
     for _, stop in stops.iterrows():
 
@@ -128,7 +128,7 @@ def snap_points_to_network(graph, points):
 
     # Create a KD-tree for nearest neighbor search
     # The tree is created from a list of street node tuples (x, y, node_id)
-    tree = cKDTree([(lon, lat) for lon, lat, _ in node_data])
+    tree = KDTree([(lon, lat) for lon, lat, _ in node_data])
 
     for index, row in points.iterrows():
 

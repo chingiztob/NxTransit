@@ -187,7 +187,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
 
     # Convert departure_time from HH:MM:SS o seconds
     departure_time_seconds = parse_time_to_seconds(departure_time_input)
-    
+
     # Filtering stop_times by time window
     filtered_stops = _filter_stop_times_by_time(stop_times_df,
                                                 departure_time_seconds,
