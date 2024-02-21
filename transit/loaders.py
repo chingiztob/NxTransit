@@ -1,19 +1,19 @@
+import multiprocessing as mp
 import os
 import time
-import multiprocessing as mp
 
-import numpy as np
-import networkx as nx
-import pandas as pd
 import geopandas as gpd
+import networkx as nx
+import numpy as np
 import osmnx as ox
-from shapely.geometry import Point, LineString
+import pandas as pd
+from shapely.geometry import LineString, Point
 
-from .converters import parse_time_to_seconds
 from .connectors import _fill_coordinates, connect_stops_to_streets_utm
+from .converters import parse_time_to_seconds
 
 
-def _preprocess_schedules(graph):
+def _preprocess_schedules(graph: nx.DiGraph):
     # Sorting schedules for faster lookup using binary search
     for edge in graph.edges(data=True):
         if 'schedules' in edge[2]:
@@ -32,18 +32,25 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
     """
     Adds edges with schedule information and optionally shape geometry between stops to the graph.
 
-    Parameters:
-    - G (nx.MultiDiGraph): The networkx graph to which the edges will be added.
-    - sorted_stop_times (pd.DataFrame): A DataFrame containing sorted stop times information.
-    - trips_df (pd.DataFrame): A DataFrame containing trip information, including shape_id.
-    - shapes (dict): A dictionary mapping shape_ids to their respective linestring geometries.
-    - trip_to_shape_map (dict): A dictionary mapping trip_ids to shape_ids.
-    - read_shapes (bool): If True, shape geometries will be added to the edges. Defaults to True.
+    Parameters
+    ----------
+    G : nx.MultiDiGraph
+        The networkx graph to which the edges will be added.
+    sorted_stop_times : pd.DataFrame
+        A DataFrame containing sorted stop times information.
+    trips_df : pd.DataFrame
+        A DataFrame containing trip information, including shape_id.
+    shapes : dict
+        A dictionary mapping shape_ids to their respective linestring geometries.
+    trip_to_shape_map : dict
+        A dictionary mapping trip_ids to shape_ids.
+    read_shapes : bool, optional
+        If True, shape geometries will be added to the edges. Defaults to True.
     """
     # For each pair of consecutive stops in the group (trip),
     # create an edge with schedule information
     # If the edge already exists, add the schedule to the list of schedules
-    
+
     # Uses trip_id -> shape_id mapping to add shape geometry to the edge
     # In order to avoid searching the shapes DataFrame for each trip_id
 
@@ -58,17 +65,18 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
 
         # Getting route_id from trips_df
         # (searching by trip_id in trips_df and selecting route_id column)
-        route_id = trips_df.loc[trips_df['trip_id'] 
+        route_id = trips_df.loc[trips_df['trip_id']
                                 == trip_id, 'route_id'
                                 ].values[0]
-       
+
         if 'wheelchair_accessible' in trips_df.columns:
-            wheelchair_accessible = trips_df.loc[trips_df['trip_id']
-                                                == trip_id, 'wheelchair_accessible'
-                                                ].values[0]
+            wheelchair_accessible = trips_df.loc[
+                trips_df['trip_id']
+                == trip_id, 'wheelchair_accessible'
+                ].values[0]
         else:
             wheelchair_accessible = None
-   
+
         schedule_info = (departure, arrival, route_id, wheelchair_accessible)
 
         geometry = None
@@ -91,7 +99,7 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
                 G.add_edge(*edge, schedules=[schedule_info], type='transit')
 
 
-def add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map):
+def _add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map):
     """
     Adds edges to the graph for a chunk of trips.
     """
@@ -129,19 +137,25 @@ def _load_GTFS(
     Loads GTFS data from the specified directory path and returns a graph and a dataframe of stops.
     The function uses parallel processing to speed up data loading.
 
-    Parameters:
-    ---------
-    - GTFSpath (str): Path to the directory containing GTFS data files.
-    - departure_time_input (str): The departure time in 'HH:MM:SS' format.
-    - day_of_week (str): Day of the week in lower case, e.g. "monday".
-    - duration_seconds (int): Duration of the time window to load in seconds.
-    - read_shapes (bool): eometry reading flag, passed from feed_to_graph
+    Parameters
+    ----------
+    GTFSpath : str
+        Path to the directory containing GTFS data files.
+    departure_time_input : str
+        The departure time in 'HH:MM:SS' format.
+    day_of_week : str
+        Day of the week in lower case, e.g. "monday".
+    duration_seconds : int
+        Duration of the time window to load in seconds.
+    read_shapes : bool
+        Geometry reading flag, passed from feed_to_graph.
 
-    Returns:
-    ---------
-    - Tuple[nx.MultiDiGraph, str, int, pd.DataFrame]: A tuple containing:
-        - nx.MultiDiGraph: Graph representing GTFS data.
-        - pd.DataFrame: DataFrame containing stop information.
+    Returns
+    -------
+    tuple
+        A tuple containing:
+            - nx.MultiDiGraph: Graph representing GTFS data.
+            - pd.DataFrame: DataFrame containing stop information.
     """
     # Initialize the graph and read data files.
     G = nx.DiGraph()
@@ -234,7 +248,7 @@ def _load_GTFS(
             # Create a subgraph in each process
             # Each process will return a graph with edges for a subset of trips
             # The results will be combined into a single graph
-            results = pool.starmap(add_edges_parallel,
+            results = pool.starmap(_add_edges_parallel,
                                    [(G, chunk, trips_df, shapes,
                                      read_shapes, trip_to_shape_map) for chunk in chunks
                                     ])
@@ -294,8 +308,8 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
     Loads OpenStreetMap data within a convex hull of stops in GTFS feed, 
     creates a street network graph, and adds walking times as edge weights.
 
-    Returns:
-    ----------
+    Returns
+    -------
     G_city : networkx.MultiDigraph
         A street network graph with walking times as edge weights.
     """
@@ -394,7 +408,6 @@ def feed_to_graph(
 
     # Combining OSM and GTFS data
     G_combined = nx.compose(G_transit, G_city)
-    del G_transit, G_city
 
     # Filling UTM coordinates for graph nodes
     _fill_coordinates(G_combined)

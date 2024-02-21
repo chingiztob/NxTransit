@@ -5,22 +5,22 @@ import warnings
 # https://systemweakness.com/how-to-use-the-win32api-with-python3-3adde999211b
 def estimate_ram():
     """
-    This function estimates the total and free physical memory 
-    available on a Windows based system.
+    This function estimates the total and free physical memory available on a Windows based system.
 
-    Returns:
-    ----------
-        A tuple:
-        - total physical memory available in bytes.
-        - free physical memory available in bytes.
+    Returns
+    -------
+    tuple
+        A tuple containing:
+            - total physical memory available in bytes.
+            - free physical memory available in bytes.
 
-    Raises:
-    ----------
-        Warning if the function is called on a non-Windows based system. 
-        Returns None, None in this case.
+    Raises
+    ------
+    Warning
+        If the function is called on a non-Windows based system. Returns None, None in this case.
     """
     if platform.system() != "Windows":
-        Warning("This method is intended for Windows based systems.")
+        warnings.warn("This method is intended for Windows based systems.")
         return None, None
 
     else:

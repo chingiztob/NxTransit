@@ -1,20 +1,24 @@
 import pandas as pd
-
+import shapely.geometry
 import utm
 from scipy.spatial import KDTree
-import shapely.geometry
 
 
 def latlon_to_utm(lat, lon):
     """
     Convert coordinates from WGS84 (latitude, longitude) to rectangular UTM coordinates.
 
-    Args:
-        lat (float): Latitude in decimal degrees.
-        lon (float): Longitude in decimal degrees.
+    Parameters
+    ----------
+    lat : float
+        Latitude in decimal degrees.
+    lon : float
+        Longitude in decimal degrees.
 
-    Returns:
-        tuple: A tuple containing the UTM easting and northing coordinates in meters.
+    Returns
+    -------
+    tuple
+        A tuple containing the UTM easting and northing coordinates in meters.
     """
     x, y, _, _ = utm.from_latlon(lat, lon)
     return x, y
@@ -80,18 +84,21 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
 
 
 def _fill_coordinates(graph):
-    '''
+    """
     Populates the UTM_X, and UTM_Y attributes of each node in the graph based on the stop coordinates.
 
-    Args:
+    Parameters
     ----------
-    - graph: NetworkX graph representing transit system.
-    - stops: Pandas DataFrame containing stop_id, stop_lat, and stop_lon columns.
+    graph : networkx.Graph
+        NetworkX graph representing the transit system.
+    stops : pandas.DataFrame
+        DataFrame containing stop_id, stop_lat, and stop_lon columns.
 
-    Returns:
-    ----------
-    - graph: NetworkX graph with updated node attributes.
-    '''
+    Returns
+    -------
+    graph : networkx.Graph
+        NetworkX graph with updated node attributes.
+    """
     for node in graph.nodes():
         try:
 
@@ -108,17 +115,19 @@ def _fill_coordinates(graph):
 
 def snap_points_to_network(graph, points):
     """
-    Snaps point features from GeoDataFrame to
-    the nearest street node in the graph.
+    Snaps point features from GeoDataFrame to the nearest street node in the graph.
 
-    Parameters:
+    Parameters
     ----------
-    - graph: NetworkX graph representing transit system.
-    - points: GeoDataFrame containing point geometries.
+        graph : networkx.Graph
+            NetworkX graph representing the transit system.
+        points : geopandas.GeoDataFrame
+            GeoDataFrame containing point geometries.
 
-    Returns:
-    ----------
-    - graph: NetworkX graph with added snapped points as nodes.
+    Returns
+    -------
+        graph: networkx.Graph
+            NetworkX graph with added snapped points as nodes.
     """
     # Create a list of street node tuples (x, y, node_id)
     node_data = [(data['x'], data['y'], n)

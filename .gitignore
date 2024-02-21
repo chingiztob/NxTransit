@@ -160,6 +160,7 @@ cython_debug/
 #.idea/
 
 # Development files
+.vscode
 cache
 multiprocessing_tests.py
 tests_3.ipynb

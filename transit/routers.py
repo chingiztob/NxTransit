@@ -2,7 +2,7 @@ from heapq import heappop, heappush
 import bisect
 
 
-def _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair = False):
+def _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair=False):
     """
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
     Used in the time-dependent Dijkstra algorithm.
@@ -36,14 +36,21 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
     """
     Finds the shortest path between two nodes in a graph using a time-dependent Dijkstra algorithm.
 
-    Parameters:
-        graph (networkx.Graph): The graph to search for the shortest path.
-        source: The starting node.
-        target: The target node.
-        start_time (float): The starting time.
+    Parameters
+    ----------
+    graph : networkx.Graph
+        The graph to search for the shortest path.
+    source
+        The starting node.
+    target
+        The target node.
+    start_time : float
+        The starting time.
 
-    Returns:
-         - tuple: A tuple containing the following elements:
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
             - list: The shortest path from the source to the target node.
             - float: The arrival time at the target node.
             - float: The travel time from the source to the target node.
@@ -150,13 +157,19 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     """
     Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.
 
-    Parameters:
-        graph (networkx.DiGraph): The graph to search.
-        source (hashable): The node to start the search from.
-        start_time (float): The time to start the search from.
+    Parameters
+    ----------
+    graph : networkx.DiGraph
+        The graph to search.
+    source : hashable
+        The node to start the search from.
+    start_time : float
+        The time to start the search from.
 
-    Returns:
-         - tuple: A tuple containing three dictionaries:
+    Returns
+    -------
+    tuple
+        A tuple containing three dictionaries:
             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
             - travel_times: A dictionary mapping each node to the travel time from the source node.
@@ -229,17 +242,24 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
     This version uses a precomputed hash table for quick access to sorted schedules.
     You can use the `process_graph_to_hash_table` function to create the hash table.
 
-    Args:
-        graph (networkx.DiGraph): The graph to search.
-        source (hashable): The node to start the search from.
-        start_time (float): The time to start the search from.
-        schedules_hash (dict): A hash table for quick access to sorted schedules.
+    Parameters
+    ----------
+    graph : networkx.DiGraph
+        The graph to search.
+    source : hashable
+        The node to start the search from.
+    start_time : float
+        The time to start the search from.
+    schedules_hash : dict
+        A hash table for quick access to sorted schedules.
 
-    Returns:
-         - tuple: A tuple containing three dictionaries:
-             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
-             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
-             - travel_times: A dictionary mapping each node to the travel time from the source node.
+    Returns
+    -------
+    tuple
+        A tuple containing three dictionaries:
+            - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
+            - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
+            - travel_times: A dictionary mapping each node to the travel time from the source node.
     """
     if hashtable is None:
         raise ValueError("The hash table is required for this algorithm.")
@@ -271,26 +291,33 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
     return arrival_times, predecessors, travel_times
 
 
-def single_source_time_dependent_dijkstra(graph, source, start_time, hashtable = None, algorithm='sorted'):
+def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashtable: dict = None, algorithm='sorted'):
     """
     Compute the shortest paths and travel times from a single source node to all other nodes in a time-dependent graph.
-        You can use the `process_graph_to_hash_table` function to create the hash table.
+    You can use the `process_graph_to_hash_table` function to create the hash table.
 
-    Args:
-        graph (nx.DiGraph): The time-dependent graph.
-        source (Node): The source node of the graph.
-        start_time (int): The starting time in seconds since midnight.
-        hashtable (dict, optional): A hashtable for storing precomputed values. Required for 'hashed' algorithm.
+    Parameters
+    ----------
+    graph : nx.DiGraph
+        The time-dependent graph.
+    source : Node
+        The source node of the graph.
+    start_time : int
+        The starting time in seconds since midnight.
+    hashtable : dict, optional
+        A hashtable for storing precomputed values. Required for 'hashed' algorithm.
+    algorithm : str, optional
+        The algorithm to use for computing shortest paths. Can be 'sorted', 'hashed'. Defaults to 'sorted'.
+        - Sorted: using binary search to find the next departure time in graph attributes (slowest)
+        - Hashed: using a precomputed hashtable for quick access to sorted schedules. Works 20 - 30% faster than 'sorted'
 
-         - algorithm (str, optional): The algorithm to use for computing shortest paths. Can be 'sorted', 'hashed'. Defaults to 'sorted'.
-             - Sorted - using binary search to find the next departure time in graph attributes (slowest)
-             - Hashed - using a precomputed hashtable for quick access to sorted schedules. Works 20 - 30% faster than 'sorted'
-
-    Returns:
-         - tuple: A tuple containing three dictionaries:
-             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
-             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
-             - travel_times: A dictionary mapping each node to the travel time from the source node.
+    Returns
+    -------
+    tuple
+        A tuple containing three dictionaries:
+            - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
+            - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
+            - travel_times: A dictionary mapping each node to the travel time from the source node.
     """
 
     if algorithm == 'sorted':

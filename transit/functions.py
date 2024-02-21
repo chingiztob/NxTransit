@@ -1,39 +1,44 @@
-import os
 import multiprocessing
+import os
 import time
 from functools import partial
 from statistics import mean
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-import geopandas as gpd
-import tqdm
-
-from shapely.geometry import Point, Polygon
 import scipy.signal
+import tqdm
 from pympler import asizeof
+from shapely.geometry import Point, Polygon
 
-from .routers import time_dependent_dijkstra, single_source_time_dependent_dijkstra
-from .other import estimate_ram, bytes_to_readable
+from .other import bytes_to_readable, estimate_ram
+from .routers import single_source_time_dependent_dijkstra, time_dependent_dijkstra
 
 
-def calculate_OD_matrix(graph, nodes, departure_time, hashtable=None, algorithm='sorted'):
+def calculate_OD_matrix(graph, nodes: list, departure_time: int,
+                        hashtable: dict = None, algorithm='sorted'
+                        ):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, nodes, and departure time.
-    
-    Parameters:
+
+    Parameters
     ----------
-    graph (networkx.Graph): The graph representing the transit network.
-    nodes (list): A list of node IDs in the graph.
-    departure_time (int): The departure time in seconds since midnight.
-    
-    Returns:
-    ----------
-    pandas.DataFrame: A DataFrame containing the OD matrix with the following columns:
-        - source_node: The ID of the origin node.
-        - destination_node: The ID of the destination node.
-        - arrival_time: The arrival time at the destination node in seconds since midnight.
-        - travel_time: The travel time from the origin node to the destination node in seconds.
+    graph : networkx.Graph
+        The graph representing the transit network.
+    nodes : list
+        A list of node IDs in the graph.
+    departure_time : int
+        The departure time in seconds since midnight.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame containing the OD matrix with the following columns:
+            - source_node: The ID of the origin node.
+            - destination_node: The ID of the destination node.
+            - arrival_time: The arrival time at the destination node in seconds since midnight.
+            - travel_time: The travel time from the origin node to the destination node in seconds.
     """
 
     results = []
@@ -92,17 +97,23 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
     Calculates the Origin-Destination (OD) matrix for a given graph, 
     nodes, and departure time using parallel processing.
 
-    Parameters:
-    -----------
-    - graph (networkx.Graph): The graph representing the transit network.
-    - nodes (list): A list of node IDs in the graph.
-    - departure_time (int): The departure time in seconds since midnight.
-    - num_processes (int): Number of parallel processes to use for computation.
-    - hashtable (dict): Optional hash table for the graph.
-
-    Returns:
+    Parameters
     ----------
-    pandas.DataFrame: A DataFrame containing the OD matrix.
+    graph : networkx.Graph
+        The graph representing the transit network.
+    nodes : list
+        A list of node IDs in the graph.
+    departure_time : int
+        The departure time in seconds since midnight.
+    num_processes : int
+        Number of parallel processes to use for computation.
+    hashtable : dict, optional
+        Optional hash table for the graph.
+
+    Returns
+    -------
+    results_df : pandas.DataFrame
+        A DataFrame containing the OD matrix.
     """
     print(f'Calculating the OD using {num_processes} processes')
 
@@ -150,17 +161,23 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     """
     Creates a service area by buffering around all points within a travel time cutoff.
 
-    Parameters:
+    Parameters
     ----------
-        graph (networkx.DiGraph): The graph to search.
-        source: The graph node to start the search from.
-        start_time (float): The time to start the search from.
-        cutoff (float): The travel time cutoff for including nodes in the service area.
-        buffer_radius (float): The radius in meters for buffering around each point.
+    graph : networkx.DiGraph
+        The graph to search.
+    source : hashable
+        The graph node to start the search from.
+    start_time : float
+        The time to start the search from.
+    cutoff : float
+        The travel time cutoff for including nodes in the service area.
+    buffer_radius : float
+        The radius in meters for buffering around each point.
 
-    Returns:
+    Returns
     -------
-         - tuple: A tuple containing two GeoDataFrames:
+    tuple
+        A tuple containing two GeoDataFrames:
             - The first GeoDataFrame has a single geometry column containing the merged buffer polygon.
             - The second GeoDataFrame contains the points within the cutoff.
     """
@@ -199,14 +216,17 @@ def create_grid(geodataframe, cell_size):
     """
     Creates a grid within the bounding box of a GeoDataFrame.
 
-    Parameters:
-    --------
-        geodataframe: GeoDataFrame containing the geometry to be gridded
-        cell_size (float): size of the grid cells in the meters
+    Parameters
+    ----------
+    geodataframe : GeoDataFrame
+        GeoDataFrame containing the geometry to be gridded.
+    cell_size : float
+        Size of the grid cells in the meters.
 
-    Returns:
-    --------
-        gpd.GeoDataFrame: Polygon grid
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Polygon grid.
     """
 
     geodataframe = geodataframe.to_crs("EPSG:4087")  # Project to metric CRS for accurate cell size
@@ -234,13 +254,15 @@ def create_centroids_dataframe(polygon_gdf):
     """
     Creates a GeoDataFrame with the centroids of polygons from the given GeoDataFrame.
 
-    Parameters:
-    --------
-        polygon_gdf: gpd.GeoDataFrame containing polygons
+    Parameters
+    ----------
+    polygon_gdf : gpd.GeoDataFrame
+        GeoDataFrame containing polygons.
 
-    Returns:
-    --------
-        gpd.GeoDataFrame: GeoDataFrame with Point geometries of the centroids
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame with Point geometries of the centroids.
     """
     # Calculate centroids
     centroids = polygon_gdf.geometry.centroid
@@ -259,16 +281,19 @@ def edge_frequency(graph, start_time, end_time):
     """
     Calculates the frequency of edges in a graph 
     based on the schedules between start_time and end_time.
- 
-    Parameters:
-    --------
-        graph (networkx.Graph): The graph containing the edges and schedules.
-        start_time (int): The start time in seconds from midnight.
-        end_time (int): The end time in seconds from midnight.
 
-    Returns:
-    --------
-        None
+    Parameters
+    ----------
+    graph : networkx.Graph
+        The graph containing the edges and schedules.
+    start_time : int
+        The start time in seconds from midnight.
+    end_time : int
+        The end time in seconds from midnight.
+
+    Returns
+    -------
+    None
     """
 
     for edge in graph.edges(data = True):
@@ -293,15 +318,18 @@ def node_frequency(graph, start_time, end_time):
     Calculates the frequency of departures at nodes in a graph 
     based on the schedules of adjacent edges between start_time and end_time.
 
-    Parameters:
-    --------
-        graph (networkx.Graph): The graph containing the nodes and adjacent edges with schedules.
-        start_time (int): The start time in seconds from midnight.
-        end_time (int): The end time in seconds from midnight.
+    Parameters
+    ----------
+    graph : networkx.Graph
+        The graph containing the nodes and adjacent edges with schedules.
+    start_time : int
+        The start time in seconds from midnight.
+    end_time : int
+        The end time in seconds from midnight.
 
-    Returns:
-    --------
-        None
+    Returns
+    -------
+    None
     """
 
     for node_view in graph.nodes(data=True):
@@ -336,13 +364,15 @@ def validate_feed(gtfs_path: str) -> bool:
     """
     Validates the GTFS feed located at the specified path.
 
-    Parameters:
+    Parameters
     ----------
-    - gtfs_path (str): Path to the GTFS dataset directory.
+    gtfs_path : str
+        Path to the GTFS dataset directory.
 
-    Returns:
+    Returns
     -------
-    - bool: True if the GTFS feed is valid, False otherwise.
+    bool
+        True if the GTFS feed is valid, False otherwise.
     """
 
     # List of required GTFS files
@@ -466,7 +496,6 @@ def _unpack_path_vertices(path):
 def _calculate_pedestrian_time(pedestrian_path, graph):
     """
     Calculate total impedance (travel time) for pedestrian paths by summing up the edge weights.
-
     """
     impedance = 0
     for subpath in pedestrian_path:
@@ -498,17 +527,27 @@ def _reconstruct_path(target, predecessors):
 def separate_travel_times(graph, predecessors: dict, travel_times: dict, source) -> pd.DataFrame:
     """
     Separate the travel times into transit time and pedestrian time for each node in the graph.
+    
+    This function disaggregates the total travel times into two distinct 
+    components: transit time and pedestrian time. 
+    It calculates the pedestrian time by reconstructing the path from the source node 
+    to each destination node and then estimating the time spent walking. 
 
-    Parameters:
+    Parameters
     ----------
-        graph (networkx.DiGraph): The graph representing the transit network.
-        predecessors (dict): A dictionary containing the predecessors of each node in the graph.
-        travel_times (dict): A dictionary containing the travel times for each node in the graph.
-        source: The source node from which to calculate the travel times.
+    graph : networkx.DiGraph
+        The graph representing the transit network.
+    predecessors : dict
+        A dictionary containing the predecessors of each node in the graph.
+    travel_times : dict
+        A dictionary containing the travel times for each node in the graph.
+    source : hashable
+        The source node from which to calculate the travel times.
 
-    Returns:
+    Returns
     -------
-        pandas.DataFrame: A DataFrame containing the transit time and pedestrian time for each node.
+    pandas.DataFrame
+        A DataFrame containing the transit time and pedestrian time for each node.
     """
     
     results = []
@@ -534,13 +573,15 @@ def process_graph_to_hash_table(graph):
     Process a graph and convert it into a hash table
     mapping edges to their sorted schedules or static weights.
 
-    Parameters:
+    Parameters
     ----------
-        graph (networkx.Graph): The input graph.
+    graph : networkx.Graph
+        The input graph.
 
-    Returns:
+    Returns
     -------
-        dict: A hash table representing the processed graph.
+    dict
+        A hash table representing the processed graph.
     """
     schedules_hash = {}
     for from_node, to_node, data in graph.edges(data=True):
@@ -561,13 +602,14 @@ def last_service(graph):
     Calculate the last service time for each stop in the graph.
     Populates the 'last_service' attribute of each transit stop.
 
-    Parameters:
+    Parameters
     ----------
-        graph (networkx.Graph): The graph representing the transit network.
+    graph : networkx.Graph
+        The graph representing the transit network.
 
-    Returns:
+    Returns
     -------
-        None
+    None
     """
     for node, data in graph.nodes(data=True):
         if data['type'] == 'transit':
@@ -595,19 +637,25 @@ def connectivity_frequency(graph, source, target, start_time, end_time, sampling
     Calculates the connectivity frequency between a source and target node in a graph
     over a specified time period.
 
-    Parameters:
+    Parameters
     ----------
-    - graph: The graph object representing the network.
-    - source: The source node.
-    - target: The target node.
-    - start_time: The start time of the analysis period.
-    - end_time: The end time of the analysis period.
-    - sampling_interval: The time interval at which to sample the connectivity.
+    graph : networkx.Graph
+        The graph object representing the network.
+    source : hashable
+        The source node.
+    target : hashable
+        The target node.
+    start_time : int or float
+        The start time of the analysis period.
+    end_time : int or float
+        The end time of the analysis period.
+    sampling_interval : int or float
+        The time interval at which to sample the connectivity.
 
-    Returns:
+    Returns
     -------
-    - mean_interval_between_peaks: The mean interval between peaks in the connectivity.
-
+    float
+        The mean interval between peaks in the connectivity.
     """
     travel_parameters = [graph, source, target]
     func = partial(time_dependent_dijkstra, *travel_parameters)
@@ -641,17 +689,23 @@ def single_source_connectivity_frequency(graph, source, start_time, end_time, sa
     Calculates the mean interval between peaks in travel times from a source node to all other nodes
     in a graph over a specified time period.
 
-    Parameters:
+    Parameters
     ----------
-    - graph: The graph object representing the network.
-    - source: The source node.
-    - start_time: The start time of the analysis period.
-    - end_time: The end time of the analysis period.
-    - sampling_interval: The time interval at which to sample the connectivity.
+    graph : networkx.Graph
+        The graph object representing the network.
+    source : hashable
+        The source node.
+    start_time : int or float
+        The start time of the analysis period.
+    end_time : int or float
+        The end time of the analysis period.
+    sampling_interval : int or float
+        The time interval at which to sample the connectivity.
 
-    Returns:
+    Returns
     -------
-    - A dictionary mapping each node to the mean interval between peaks in travel times.
+    dict
+        A dictionary mapping each node to the mean interval between peaks in travel times.
     """
     node_to_intervals = {}  # Dictionary to hold intervals for each node
 
