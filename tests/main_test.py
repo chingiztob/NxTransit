@@ -1,5 +1,5 @@
 import pytest
-import transit as tr
+import nxtransit as tr
 
 
 # Zheleznogorsk feed by github.com/gammapopolam

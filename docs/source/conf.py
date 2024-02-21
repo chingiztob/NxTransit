@@ -1,6 +1,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
+from nxtransit import _version
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -13,7 +14,9 @@ sys.path.insert(0, os.path.abspath('../../'))
 project = 'NxTransit'
 copyright = '2024, Chingiz Zhanarbaev'
 author = 'Chingiz Zhanarbaev'
-release = '0.1.13'
+
+# Use the version information directly from the imported module
+version = release = _version.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

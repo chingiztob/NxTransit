@@ -1,5 +1,5 @@
 import pytest
-from transit.routers import _calculate_delay_sorted, _calculate_delay_hashed
+from nxtransit.routers import _calculate_delay_sorted, _calculate_delay_hashed
 
 
 @pytest.fixture(scope='module')

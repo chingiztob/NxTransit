@@ -3,9 +3,9 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "TransitTest"
-version = "0.1.12"
-description = "Alpha version of the package for public transit routing and analysis"
+name = "NxTransit_beta"
+version = "0.1.14"
+description = "Construct and analyze time-dependent transit networks from GTFS data"
 authors = [{ name = "chingiztob" }]
 dependencies = [
     "geopandas>=0.14.3",
@@ -20,6 +20,7 @@ dependencies = [
     "tqdm>=4.66.1",
     "utm>=0.7.0",
 ]
+license = {text = "MIT License"}
 requires-python = ">=3.9"
 
 [project.optional-dependencies]
@@ -28,7 +29,7 @@ tests = [
 ]
 
 [tool.setuptools]
-packages = ["transit"]
+packages = ["nxtransit"]
 
 # python -m build
 # python setup.py sdist bdist_wheel
@@ -36,4 +37,4 @@ packages = ["transit"]
 # twine upload dist/*
 # twine upload --repository testpypi dist/*
 
-# pip install --index-url https://test.pypi.org/simple/ TransitTest
+# pip install --index-url https://test.pypi.org/simple/ NxTransit_beta

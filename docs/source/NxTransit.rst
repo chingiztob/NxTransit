@@ -1,18 +1,13 @@
 NxTransit Documentation
 =======================
 
-This is the User Reference for the NxTransit package. This guide describes the usage of NxTransit public API.
+This is the User Reference for the **NxTransit** package. This guide describes the usage of NxTransit public API.
 
-.. automodule:: transit.__init__
-   :members:
-   :special-members:
-   :inherited-members:
-   :show-inheritance:
 
 NxTransit.loaders module
 ------------------------
 
-.. automodule:: transit.loaders
+.. automodule:: nxtransit.loaders
    :members:
    :special-members:
    :inherited-members:
@@ -21,7 +16,7 @@ NxTransit.loaders module
 NxTransit.routers module
 ------------------------
 
-.. automodule:: transit.routers
+.. automodule:: nxtransit.routers
    :members:
    :special-members:
    :inherited-members:
@@ -30,7 +25,7 @@ NxTransit.routers module
 NxTransit.functions module
 --------------------------
 
-.. automodule:: transit.functions
+.. automodule:: nxtransit.functions
    :members:
    :special-members:
    :inherited-members:
@@ -39,7 +34,7 @@ NxTransit.functions module
 NxTransit.connectors module
 ---------------------------
 
-.. automodule:: transit.connectors
+.. automodule:: nxtransit.connectors
    :members:
    :special-members:
    :inherited-members:
@@ -48,7 +43,7 @@ NxTransit.connectors module
 NxTransit.converters module
 ---------------------------
 
-.. automodule:: transit.converters
+.. automodule:: nxtransit.converters
    :members:
    :special-members:
    :inherited-members:
@@ -57,7 +52,7 @@ NxTransit.converters module
 NxTransit.other module
 ----------------------
 
-.. automodule:: transit.other
+.. automodule:: nxtransit.other
    :members:
    :special-members:
    :inherited-members:
