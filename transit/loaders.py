@@ -17,8 +17,9 @@ def _preprocess_schedules(graph):
     # Sorting schedules for faster lookup using binary search
     for edge in graph.edges(data=True):
         if 'schedules' in edge[2]:
-            edge[2]['sorted_schedules'] = sorted(edge[2]['schedules'], 
-                                                 key=lambda x: x[0])
+            edge[2]['sorted_schedules'] = sorted(
+                edge[2]['schedules'],
+                key=lambda x: x[0])
 
 
 def _add_edges_to_graph(G: nx.MultiDiGraph,
@@ -60,8 +61,15 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
         route_id = trips_df.loc[trips_df['trip_id'] 
                                 == trip_id, 'route_id'
                                 ].values[0]
-
-        schedule_info = (departure, arrival, route_id)
+       
+        if 'wheelchair_accessible' in trips_df.columns:
+            wheelchair_accessible = trips_df.loc[trips_df['trip_id']
+                                                == trip_id, 'wheelchair_accessible'
+                                                ].values[0]
+        else:
+            wheelchair_accessible = None
+   
+        schedule_info = (departure, arrival, route_id, wheelchair_accessible)
 
         geometry = None
         if read_shapes:
@@ -109,7 +117,14 @@ def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, du
     ]
 
 
-def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, duration_seconds, read_shapes=False, multiprocessing=False):
+def _load_GTFS(
+    GTFSpath: str,
+    departure_time_input: str,
+    day_of_week: str,
+    duration_seconds,
+    read_shapes=False,
+    multiprocessing=False
+):
     """
     Loads GTFS data from the specified directory path and returns a graph and a dataframe of stops.
     The function uses parallel processing to speed up data loading.
@@ -121,7 +136,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
     - day_of_week (str): Day of the week in lower case, e.g. "monday".
     - duration_seconds (int): Duration of the time window to load in seconds.
     - read_shapes (bool): eometry reading flag, passed from feed_to_graph
-    
+
     Returns:
     ---------
     - Tuple[nx.MultiDiGraph, str, int, pd.DataFrame]: A tuple containing:
@@ -176,7 +191,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
         service_ids = calendar_df[calendar_df[day_of_week] == 1]['service_id']
         trips_df = trips_df[trips_df['service_id'].isin(service_ids)]
     else:
-        raise FileNotFoundError('calendar.txt not found')
+        raise FileNotFoundError('Required file calendar.txt not found')
 
     # Filter stop_times to only include trips that occur 
     # within a specified time window

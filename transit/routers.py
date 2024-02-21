@@ -2,7 +2,7 @@ from heapq import heappop, heappush
 import bisect
 
 
-def _calculate_delay_sorted(graph, from_node, to_node, current_time):
+def _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair = False):
     """
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
     Used in the time-dependent Dijkstra algorithm.
@@ -15,8 +15,13 @@ def _calculate_delay_sorted(graph, from_node, to_node, current_time):
         idx = bisect.bisect_left(departure_times, current_time)
         # If the next departure time exists, calculate the delay and route
         if idx < len(schedules):
-            next_departure, next_arrival, route = schedules[idx]
-            return next_departure - current_time + (next_arrival - next_departure), route
+            
+            next_departure, next_arrival, route, wheelchair_acc = schedules[idx]
+            
+            if wheelchair and wheelchair_acc != 1:
+                return float('inf'), None
+            else:
+                return next_departure - current_time + (next_arrival - next_departure), route
         # If the next departure time does not exist, return 'inf' as the delay
         else:
             return float('inf'), None
@@ -25,7 +30,7 @@ def _calculate_delay_sorted(graph, from_node, to_node, current_time):
         return graph[from_node][to_node]['weight'], None
 
 
-def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes=False):
+def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes=False, wheelchair=False):
     # https://doi.org/10.1016/j.entcs.2003.12.019
     # https://bradfieldcs.com/algos/graphs/dijkstras-algorithm/
     """
@@ -79,7 +84,11 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
             # If the neighbor has not been visited yet
             # Если сосед еще не посещен
             if v not in visited:
-                delay, route = _calculate_delay_sorted(graph, u, v, current_time)
+                delay, route = _calculate_delay_sorted(graph,
+                                                       u, v,
+                                                       current_time,
+                                                       wheelchair=wheelchair
+                                                       )
                 # Skip the neighbor if the arrival time is infinite
                 # Пропустить соседа, если время прибытия бесконечно
                 if delay == float('inf'):
@@ -183,7 +192,7 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
 # Experimental implementations using hashed schedules for calculating the delay
 
 
-def _calculate_delay_hashed(from_node, to_node, current_time, hashtable):
+def _calculate_delay_hashed(from_node, to_node, current_time, hashtable, wheelchair =False):
     """
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
     Used in the time-dependent Dijkstra algorithm.
@@ -203,8 +212,12 @@ def _calculate_delay_hashed(from_node, to_node, current_time, hashtable):
 
         if idx < len(schedule_info):
 
-            next_departure, next_arrival, route = schedule_info[idx]
-            return next_departure - current_time + (next_arrival - next_departure), route
+            next_departure, next_arrival, route, wheelchair_acc = schedule_info[idx]
+
+            if wheelchair and wheelchair_acc != '1':
+                return float('inf'), None
+            else:
+                return next_departure - current_time + (next_arrival - next_departure), route
         else:
 
             return float('inf'), None

@@ -12,9 +12,8 @@ This is a Python package developed for the integration of General Transit Feed S
 ## Getting Started
 
 ### Installation
-Not yet :/
 ```bash
-pip install package-name
+pip install --index-url https://test.pypi.org/simple/ TransitTest
 ```
 ### License
 Package is open source and licensed under the MIT license. 

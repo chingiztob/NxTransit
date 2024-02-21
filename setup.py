@@ -17,7 +17,7 @@ setup(
         "tqdm>=4.66.1",
         "utm>=0.7.0",
     ],
-    version='0.1.10',
+    version='0.1.11',
     description='Alpha version of the package for public transit routing and analysis',
     author='chingiztob',
 )
