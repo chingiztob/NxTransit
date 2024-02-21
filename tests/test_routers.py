@@ -8,9 +8,9 @@ def graph():
         'A': {
             'B': {
                 'sorted_schedules': [
-                    (10, 20, 'route_1'),
-                    (30, 40, 'route_2'),
-                    (50, 60, 'route_3'),
+                    (10, 20, 'route_1', None),
+                    (30, 40, 'route_2', None),
+                    (50, 60, 'route_3', None),
                 ]
             }
         }
