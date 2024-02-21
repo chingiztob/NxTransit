@@ -1,5 +1,5 @@
 import pytest
-from transit.routers import _calculate_delay_sorted, _calculate_delay_hashed
+from nxtransit.routers import _calculate_delay_sorted, _calculate_delay_hashed
 
 
 @pytest.fixture(scope='module')
@@ -8,9 +8,9 @@ def graph():
         'A': {
             'B': {
                 'sorted_schedules': [
-                    (10, 20, 'route_1'),
-                    (30, 40, 'route_2'),
-                    (50, 60, 'route_3'),
+                    (10, 20, 'route_1', None),
+                    (30, 40, 'route_2', None),
+                    (50, 60, 'route_3', None),
                 ]
             }
         }
@@ -19,9 +19,9 @@ def graph():
 
 @pytest.fixture(scope='module')
 def hash():
-    return {('A', 'B'): [(10, 20, 'route_1'), 
-                         (30, 40, 'route_2'), 
-                         (50, 60, 'route_3')
+    return {('A', 'B'): [(10, 20, 'route_1', None),
+                         (30, 40, 'route_2', None), 
+                         (50, 60, 'route_3', None)
                          ],
             ('B', 'C'): [(10,)]
             }
@@ -34,7 +34,7 @@ def test_next_departure_exists(graph):
     expected_delay = 15
     expected_route = 'route_2'
 
-    delay, route = _calculate_delay_sorted(graph, from_node, to_node, current_time)
+    delay, route = _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair=False)
 
     assert delay == expected_delay
     assert route == expected_route
@@ -47,7 +47,7 @@ def test_next_departure_does_not_exist(graph):
     expected_delay = float('inf')
     expected_route = None
 
-    delay, route = _calculate_delay_sorted(graph, from_node, to_node, current_time)
+    delay, route = _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair=False)
 
     assert delay == expected_delay
     assert route == expected_route
@@ -67,7 +67,7 @@ def test_edge_not_time_dependent():
     expected_delay = 10
     expected_route = None
 
-    delay, route = _calculate_delay_sorted(graph, from_node, to_node, current_time)
+    delay, route = _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair=False)
 
     assert delay == expected_delay
     assert route == expected_route
@@ -80,7 +80,7 @@ def test_next_departure_exists_hashed(hash):
     expected_delay = 15
     expected_route = 'route_2'
 
-    delay, route = _calculate_delay_hashed(from_node, to_node, current_time, hash)
+    delay, route = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
 
     assert delay == expected_delay
     assert route == expected_route
@@ -93,7 +93,7 @@ def test_next_departure_does_not_exist_hashed(hash):
     expected_delay = float('inf')
     expected_route = None
 
-    delay, route = _calculate_delay_hashed(from_node, to_node, current_time, hash)
+    delay, route = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
 
     assert delay == expected_delay
     assert route == expected_route
@@ -106,7 +106,7 @@ def test_edge_not_time_dependent_hashed(hash):
     expected_delay = 10
     expected_route = None
 
-    delay, route = _calculate_delay_hashed(from_node, to_node, current_time, hash)
+    delay, route = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
 
     assert delay == expected_delay
     assert route == expected_route
