@@ -68,8 +68,6 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
             shape_id = trip_to_shape_map.get(trip_id)
             if shape_id in shapes:
                 geometry = shapes[shape_id]
-            else:
-                pass
 
         # if edge already exists, add schedule to the list of schedules
         # Currently the geometry is added to the first edge found
@@ -157,7 +155,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
 
         # Group geometry by shape_id, resulting in a Pandas Series
         # with trip_id (shape_id ?) as keys and LineString geometries as values
-        shapes = shapes_df.groupby('shape_id').apply(
+        shapes = shapes_df.groupby('shape_id', group_keys=False).apply(
             lambda group: LineString(group[['shape_pt_lon', 'shape_pt_lat']].values)
             )
         # Mapping trip_id to shape_id for faster lookup
@@ -167,7 +165,7 @@ def _load_GTFS(GTFSpath: str, departure_time_input: str, day_of_week: str, durat
         shapes = None
         trip_to_shape_map = None
 
-    # Join route information to trips
+    # Join route information to trips``
     trips_df = trips_df.merge(routes, on='route_id')
 
     # Check if calendar.txt exists in GTFS directory

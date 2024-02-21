@@ -281,8 +281,12 @@ def single_source_time_dependent_dijkstra(graph, source, start_time, hashtable =
     """
 
     if algorithm == 'sorted':
-        arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_sorted(graph, source, start_time)
+        arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_sorted(
+            graph, source, start_time
+            )
     elif algorithm == 'hashed':
-        arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hashtable)
+        arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_hashed(
+            graph, source, start_time, hashtable
+            )
 
     return arrival_times, predecessors, travel_times

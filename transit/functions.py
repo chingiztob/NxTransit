@@ -39,11 +39,15 @@ def calculate_OD_matrix(graph, nodes, departure_time, hashtable=None, algorithm=
     results = []
 
     for source_node in nodes:
-        # Calculate arrival times and travel times for each node using the specified algorithm
-        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(graph, source_node, departure_time,
-                                                                               hashtable, algorithm=algorithm)
+        # Calculate arrival times and travel times 
+        # for each node using the specified algorithm
+        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
+            graph, source_node, departure_time,
+            hashtable, algorithm=algorithm
+            )
 
-        # Iterate through all nodes to select them in the results of Dijkstra's algorithm
+        # Iterate through all nodes to select them 
+        # in the results of Dijkstra's algorithm
         for dest_node in nodes:
             if dest_node in arrival_times:
                 # Add results to the list
@@ -87,7 +91,7 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, 
     nodes, and departure time using parallel processing.
-    
+
     Parameters:
     -----------
     - graph (networkx.Graph): The graph representing the transit network.
@@ -95,20 +99,22 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
     - departure_time (int): The departure time in seconds since midnight.
     - num_processes (int): Number of parallel processes to use for computation.
     - hashtable (dict): Optional hash table for the graph.
-    
+
     Returns:
     ----------
     pandas.DataFrame: A DataFrame containing the OD matrix.
     """
     print(f'Calculating the OD using {num_processes} processes')
-    
+
     # Assuming functions asizeof and estimate_ram are defined elsewhere to estimate RAM usage
     # If not, remove these checks or implement equivalent functionality
     graph_size = asizeof.asizeof(graph)
     ram, free_ram = estimate_ram()
     expected_ram = graph_size * 5 + num_processes * graph_size * 2.5
     
-    if expected_ram > free_ram:
+    if expected_ram is None or free_ram is None:
+        print('Could not estimate memory usage. Proceeding with the calculation.')
+    elif expected_ram > free_ram:
         raise MemoryError(f'Graph size {bytes_to_readable(graph_size)}, '
                           f'expected costs {bytes_to_readable(expected_ram)} exceed available '
                           f'memory {bytes_to_readable(free_ram)}')
@@ -127,6 +133,7 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
                                  graph=graph, 
                                  departure_time=departure_time,
                                  hashtable=hashtable)
+   
         results = pool.map(partial_worker, nodes)
 
     # Flatten the list of lists
@@ -135,7 +142,7 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
     results_df = pd.DataFrame(results)
 
     print(f"Time elapsed: {time.time() - time_start}")
-    
+
     return results_df
 
 
@@ -238,10 +245,13 @@ def create_centroids_dataframe(polygon_gdf):
     # Calculate centroids
     centroids = polygon_gdf.geometry.centroid
 
-    # Create a GeoDataFrame with these centroids and include the 'origin_id' from the parent polygon
-    centroids_gdf = gpd.GeoDataFrame(polygon_gdf[['id']].copy(), geometry=centroids, crs=polygon_gdf.crs)
+    # Create a GeoDataFrame with these centroids
+    # and include the 'origin_id' from the parent polygon
+    centroids_gdf = gpd.GeoDataFrame(polygon_gdf[['id']].copy(),
+                                     geometry=centroids, crs=polygon_gdf.crs
+                                     )
     centroids_gdf.rename(columns={'id': 'origin_id'}, inplace=True)
-    
+
     return centroids_gdf
 
 
