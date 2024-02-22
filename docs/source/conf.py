@@ -28,7 +28,9 @@ extensions = [
 
 templates_path = ['_templates']
 exclude_patterns = []
-
+needs_sphinx = "7"
+language = "en"
+source_suffix = ".rst"
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
