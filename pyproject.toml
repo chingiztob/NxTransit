@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "NxTransit_beta"
-version = "0.1.14"
+version = "0.1.15"
 description = "Construct and analyze time-dependent transit networks from GTFS data"
 authors = [{ name = "chingiztob" }]
 dependencies = [
-    "geopandas>=0.14.3",
-    "networkx>=3.2.1",
+    "geopandas>=0.14.0",
+    "networkx>=3.2.0",
     "numpy>=1.26.4",
     "osmnx>=1.9.1",
     "pandas>=2.2.0",
@@ -32,7 +32,6 @@ tests = [
 packages = ["nxtransit"]
 
 # python -m build
-# python setup.py sdist bdist_wheel
 
 # twine upload dist/*
 # twine upload --repository testpypi dist/*
