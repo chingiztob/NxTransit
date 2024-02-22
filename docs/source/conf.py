@@ -21,14 +21,11 @@ version = release = _version.__version__
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon'
-]
+extensions = ["sphinx.ext.autodoc","sphinx.ext.napoleon"]
 
 templates_path = ['_templates']
 exclude_patterns = []
-needs_sphinx = "7"
+needs_sphinx = "7.2.6"
 language = "en"
 source_suffix = ".rst"
 

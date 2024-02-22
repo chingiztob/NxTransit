@@ -1,2 +1,2 @@
 furo
-sphinx == 7.*
+sphinx == 7.2.6
