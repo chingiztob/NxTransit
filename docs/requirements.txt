@@ -1,6 +1,6 @@
 furo
 sphinx == 7.2.6
-geopandas>=0.14.0,
+geopandas>=0.14.0
 networkx>=3.2.0
 numpy>=1.26.4
 osmnx>=1.9.1
