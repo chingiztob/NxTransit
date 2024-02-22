@@ -233,7 +233,7 @@ def _load_GTFS(
                    )
 
     # Track time for benchmarking
-    timestamp = time.time()
+    timestamp = time.perf_counter()
     if multiprocessing:
 
         print('Building graph in parallel')
@@ -272,7 +272,7 @@ def _load_GTFS(
                     # Add new edge with data
                     merged_graph.add_edge(u, v, **data)
 
-        print(f'Building graph in parallel complete in {time.time() - timestamp} seconds')
+        print(f'Building graph in parallel complete in {time.perf_counter() - timestamp} seconds')
 
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(merged_graph)
@@ -326,6 +326,12 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
                                    simplify=True)
     print('Street network graph created')
 
+    for u, v, key, data in G_city.edges(keys=True, data=True):
+        attributes_to_keep = {'length', 'highway', 'name'}  # Specify your attributes to keep
+        for attribute in list(data):
+            if attribute not in attributes_to_keep:
+                del data[attribute]
+
     # Adding walking times on streets
     walk_speed_mps = 1.39  # 5кмч
     for _, _, _, data in G_city.edges(data=True, keys = True):
@@ -336,7 +342,12 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
 
     for _, data in G_city.nodes(data = True):
         data['type'] = 'street'
-
+        
+    for u, v, key, data in G_city.edges(keys=True, data=True):
+        u_geom = Point(G_city.nodes[u]['x'], G_city.nodes[u]['y'])
+        v_geom = Point(G_city.nodes[v]['x'], G_city.nodes[v]['y'])
+        data['geometry'] = LineString([u_geom, v_geom])
+        
     if save_graphml:
         ox.save_graphml(G_city, path)
 

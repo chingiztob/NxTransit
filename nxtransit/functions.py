@@ -135,7 +135,7 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
               f'{bytes_to_readable(free_ram)}')
 
     results = []
-    time_start = time.time()
+    time_start = time.perf_counter()
 
     with multiprocessing.Pool(processes=num_processes) as pool:
         # Fixing the arguments of the calculate_OD_worker function for nodes list
@@ -152,7 +152,7 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
 
     results_df = pd.DataFrame(results)
 
-    print(f"Time elapsed: {time.time() - time_start}")
+    print(f"Time elapsed: {time.perf_counter() - time_start}")
 
     return results_df
 
@@ -176,12 +176,16 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
 
     Returns
     -------
-    tuple
-        A tuple containing two GeoDataFrames:
-            - The first GeoDataFrame has a single geometry column containing the merged buffer polygon.
-            - The second GeoDataFrame contains the points within the cutoff.
+    geopandas.GeoDataFrame
+        A GeoDataFrame containing the service area polygon.
     """
-    _, _, travel_times = single_source_time_dependent_dijkstra(graph, source, start_time, hashtable, algorithm)
+
+    _, _, travel_times = single_source_time_dependent_dijkstra(graph, 
+                                                               source, 
+                                                               start_time, 
+                                                               hashtable, 
+                                                               algorithm
+                                                               )
 
     # Filter nodes that are reachable within the cutoff
     points_data = [{'node': node,
@@ -194,22 +198,59 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
                    if time <= cutoff
                    and 'x' in graph.nodes[node]
                    and 'y' in graph.nodes[node]]
+    
+    reached_nodes = set([data['node'] for data in points_data])
 
-    # GeoDataFrame containing nodes reachable within the cutoff
+    # Filter edges so that both nodes are reached
+    reached_edges = [{'edge': (u, v), 'geometry': data['geometry']}
+                     for u, v, data in graph.edges(data=True)
+                     if u in reached_nodes 
+                     and v in reached_nodes 
+                     and 'geometry' in data
+                     and data['type'] == 'street'
+                     ]
+    
     points_gdf = gpd.GeoDataFrame(points_data, geometry='geometry', 
                                   crs="EPSG:4326")
+    
+    edges_gdf = gpd.GeoDataFrame(reached_edges, geometry='geometry', 
+                                 crs="EPSG:4326")
+    # Combine the GeoDataFrames
+    merged_gdf = pd.concat([points_gdf, edges_gdf], ignore_index=True)
 
-    # Nodes buffered and merged into a single polygon
+    # Nodes and edges buffered and merged into a single polygon
     # Reprojection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
-    buffer_gdf = points_gdf.to_crs("EPSG:4087")
+    buffer_gdf = merged_gdf.to_crs("EPSG:4087")
     buffer_gdf['geometry'] = buffer_gdf.buffer(buffer_radius)
+
     service_area_polygon = buffer_gdf.unary_union
 
     # Создание GeoDataFrame из полигона (Shapely Polygon) в EPSG:4326
-    service_area_gdf = gpd.GeoDataFrame({'geometry': [service_area_polygon]}, 
+    service_area_gdf = gpd.GeoDataFrame({'geometry': [service_area_polygon], 'id': source}, 
                                         crs="EPSG:4087").to_crs("EPSG:4326")
+    
+    return service_area_gdf
 
-    return service_area_gdf, points_gdf
+
+def service_area_multiple_sources(graph, sources, start_time, cutoff, buffer_radius, algorithm='sorted', hashtable=None, num_processes=6):
+    """
+    Calculates service areas for multiple sources using multiprocessing, returning a combined service area polygon.
+
+    Parameters are similar to the original service_area function, with the addition of num_processes for parallel execution.
+    """
+    # Prepare arguments for each task
+    tasks = [(graph, source, start_time, cutoff, buffer_radius, algorithm, hashtable) for source in sources]
+    
+    # Initialize Pool with the desired number of processes
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        # Map service_area_wrapper across all tasks
+        results = pool.starmap(service_area, tasks)
+    
+    # At this point, 'results' is a list of GeoDataFrames, each containing the service area polygon for a source
+    # Combine all service area polygons into a single GeoDataFrame
+    combined_service_area = gpd.GeoDataFrame(pd.concat(results, ignore_index=True), crs="EPSG:4326")
+ 
+    return combined_service_area
 
 
 def create_grid(geodataframe, cell_size):
