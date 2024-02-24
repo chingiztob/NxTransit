@@ -19,6 +19,7 @@ dependencies = [
     "Shapely>=2.0.3",
     "tqdm>=4.66.1",
     "utm>=0.7.0",
+    "geocube>=0.5.0",
 ]
 license = {text = "MIT License"}
 requires-python = ">=3.9"
