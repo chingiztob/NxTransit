@@ -1,3 +1,4 @@
+"""Main routing algorithms for time-dependent graphs."""
 from heapq import heappop, heappush
 import bisect
 
@@ -194,9 +195,6 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     # Однако на основе 'predecessors' можно восстановить путь к любому узлу
 
     return arrival_times, predecessors, travel_times
-
-
-# Experimental implementations using hashed schedules for calculating the delay
 
 
 def _calculate_delay_hashed(from_node, to_node, current_time, hashtable, wheelchair =False):

@@ -1,3 +1,4 @@
+"""Tools for connecting GTFS stops to the nearest street node in the graph."""
 import pandas as pd
 import shapely.geometry
 import utm

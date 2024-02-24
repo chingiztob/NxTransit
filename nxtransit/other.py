@@ -1,3 +1,4 @@
+"""This module contains miscellaneous functions memory estemation"""
 import ctypes
 import platform
 import warnings

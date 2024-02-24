@@ -22,6 +22,24 @@ NxTransit.routers module
    :inherited-members:
    :show-inheritance:
 
+NxTransit.accessibility module
+------------------------------
+
+.. automodule:: nxtransit.accessibility
+   :members:
+   :special-members:
+   :inherited-members:
+   :show-inheritance:
+
+NxTransit.frequency module
+--------------------------
+
+.. automodule:: nxtransit.frequency
+   :members:
+   :special-members:
+   :inherited-members:
+   :show-inheritance:
+
 NxTransit.functions module
 --------------------------
 
