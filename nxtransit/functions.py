@@ -24,7 +24,7 @@ def calculate_OD_matrix(graph, nodes: list, departure_time: int,
 
     Parameters
     ----------
-    graph : networkx.Graph
+    graph : networkx.DiGraph
         The graph representing the transit network.
     nodes : list
         A list of node IDs in the graph.
@@ -99,7 +99,7 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
 
     Parameters
     ----------
-    graph : networkx.Graph
+    graph : networkx.DiGraph
         The graph representing the transit network.
     nodes : list
         A list of node IDs in the graph.
@@ -159,7 +159,7 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
 
 def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = 'sorted', hashtable=None):
     """
-    Creates a service area by buffering around all points within a travel time cutoff.
+    Creates a service area by buffering around all nodes within a travel time cutoff.
 
     Parameters
     ----------
@@ -236,14 +236,35 @@ def service_area_multiple_sources(graph, sources, start_time, cutoff, buffer_rad
     """
     Calculates service areas for multiple sources using multiprocessing, returning a combined service area polygon.
 
-    Parameters are similar to the original service_area function, with the addition of num_processes for parallel execution.
+    Parameters
+    ----------
+    graph : networkx.DiGraph
+        NetworkX graph representing the transportation network.
+    sources : list
+        List of source nodes from which to calculate service areas.
+    start_time : int
+        Start time for the service area calculation.
+    cutoff : int
+        Maximum travel time or distance for the service area.
+    buffer_radius : float
+        Radius to buffer the service area polygons.
+    algorithm : str, optional
+        Algorithm to use for the service area calculation (default: 'sorted').
+    hashtable : dict, optional
+        Hashtable to store calculated service areas (default: None).
+    num_processes : int, optional
+        Number of processes to use for parallel execution (default: 6).
+
+    Returns
+    -------
+    combined_service_area : GeoDataFrame
+        A GeoDataFrame containing the combined service area polygon for all sources.
     """
     # Prepare arguments for each task
-    tasks = [(graph, source, start_time, cutoff, buffer_radius, algorithm, hashtable) for source in sources]
+    tasks = [(graph, source, start_time, cutoff, buffer_radius, algorithm, hashtable) 
+             for source in sources]
     
-    # Initialize Pool with the desired number of processes
     with multiprocessing.Pool(processes=num_processes) as pool:
-        # Map service_area_wrapper across all tasks
         results = pool.starmap(service_area, tasks)
     
     # At this point, 'results' is a list of GeoDataFrames, each containing the service area polygon for a source
@@ -325,7 +346,7 @@ def edge_frequency(graph, start_time, end_time):
 
     Parameters
     ----------
-    graph : networkx.Graph
+    graph : networkx.DiGraph
         The graph containing the edges and schedules.
     start_time : int
         The start time in seconds from midnight.
@@ -361,7 +382,7 @@ def node_frequency(graph, start_time, end_time):
 
     Parameters
     ----------
-    graph : networkx.Graph
+    graph : networkx.DiGraph
         The graph containing the nodes and adjacent edges with schedules.
     start_time : int
         The start time in seconds from midnight.
@@ -568,9 +589,7 @@ def _reconstruct_path(target, predecessors):
 def separate_travel_times(graph, predecessors: dict, travel_times: dict, source) -> pd.DataFrame:
     """
     Separate the travel times into transit time and pedestrian time for each node in the graph.
-    
-    This function disaggregates the total travel times into two distinct 
-    components: transit time and pedestrian time. 
+
     It calculates the pedestrian time by reconstructing the path from the source node 
     to each destination node and then estimating the time spent walking. 
 
@@ -616,7 +635,7 @@ def process_graph_to_hash_table(graph):
 
     Parameters
     ----------
-    graph : networkx.Graph
+    graph : networkx.DiGraph
         The input graph.
 
     Returns
@@ -645,7 +664,7 @@ def last_service(graph):
 
     Parameters
     ----------
-    graph : networkx.Graph
+    graph : networkx.DiGraph
         The graph representing the transit network.
 
     Returns
@@ -680,7 +699,7 @@ def connectivity_frequency(graph, source, target, start_time, end_time, sampling
 
     Parameters
     ----------
-    graph : networkx.Graph
+    graph : networkx.DiGraph
         The graph object representing the network.
     source : hashable
         The source node.
@@ -732,7 +751,7 @@ def single_source_connectivity_frequency(graph, source, start_time, end_time, sa
 
     Parameters
     ----------
-    graph : networkx.Graph
+    graph : networkx.DiGraph
         The graph object representing the network.
     source : hashable
         The source node.

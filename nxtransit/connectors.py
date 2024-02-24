@@ -161,15 +161,12 @@ def snap_points_to_network(graph, points):
         # The connection only happens if the found node is a street
         # Maybe this additional check is not needed
         if graph.nodes[nearest_street_node]['type'] == 'street':
-
             # Создаем геометрию ребра в формате Shapely LineString
             street_geom = shapely.geometry.Point((node_data_wgs[idx][0],
                                                   node_data_wgs[idx][1]))
             linestring = shapely.geometry.LineString([geometry, street_geom])
 
             walk_speed_mps = 1.39
-            # Currently, the incorrect degree distance is used for the calculation
-            # Will be redone with UTM
             walk_time = distance / walk_speed_mps
 
             graph.add_node(id, x=geometry.x, y=geometry.y, type='snapped')

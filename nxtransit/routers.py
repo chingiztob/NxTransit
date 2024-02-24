@@ -89,7 +89,6 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
         # Iterate over all neighbors of the node
         for v in graph.neighbors(u):
             # If the neighbor has not been visited yet
-            # Если сосед еще не посещен
             if v not in visited:
                 delay, route = _calculate_delay_sorted(graph,
                                                        u, v,
@@ -97,14 +96,11 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
                                                        wheelchair=wheelchair
                                                        )
                 # Skip the neighbor if the arrival time is infinite
-                # Пропустить соседа, если время прибытия бесконечно
                 if delay == float('inf'):
                     continue
                 # Calculate the new arrival time for the neighbor
-                # Вычисление нового времени прибытия для соседа
                 new_arrival_time = current_time + delay
                 # If the new arrival time is better, update the arrival time and predecessor
-                # Если новое время прибытия лучше, обновить время прибытия и предшественника
                 if new_arrival_time < arrival_times[v]:
                     arrival_times[v] = new_arrival_time
 
@@ -112,10 +108,8 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
                         routes[v] = route
 
                     # Assign the current node U as the predecessor of the neighbor V (in the loop)
-                    # Назначиить текущий узел U (в очереди) предшественником соседа V (в цикле)
                     predecessors[v] = u
                     # Add the neighbor to the queue with the new arrival time
-                    # Добавить соседа в очередь с новым временем прибытия
                     heappush(queue, (new_arrival_time, v))
 
     # Восстановление пути

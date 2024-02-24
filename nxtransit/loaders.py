@@ -132,7 +132,7 @@ def _load_GTFS(
     duration_seconds,
     read_shapes=False,
     multiprocessing=False
-):
+    ):
     """
     Loads GTFS data from the specified directory path and returns a graph and a dataframe of stops.
     The function uses parallel processing to speed up data loading.
@@ -327,7 +327,7 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
     print('Street network graph created')
 
     for u, v, key, data in G_city.edges(keys=True, data=True):
-        attributes_to_keep = {'length', 'highway', 'name'}  # Specify your attributes to keep
+        attributes_to_keep = {'length', 'highway', 'name'}
         for attribute in list(data):
             if attribute not in attributes_to_keep:
                 del data[attribute]
