@@ -1,4 +1,4 @@
-from nxtransit.functions import last_service
+from nxtransit.accessibility import last_service
 import networkx as nx
 
 def test_last_service_with_sorted_schedules():
