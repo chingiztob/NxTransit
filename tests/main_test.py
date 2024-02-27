@@ -53,8 +53,8 @@ def test_routing(graph):
         graph, source, target, start_time, track_used_routes=True
         )
 
-    assert int(arrival_time) == 45923
-    assert int(travel_time) == 2723
+    assert int(arrival_time) == 45926
+    assert int(travel_time) == 2726
     assert path is not None
     assert used_routes is not None
 
@@ -67,8 +67,8 @@ def test_single_source(graph):
     arrival_times, predecessors, travel_times = tr.single_source_time_dependent_dijkstra(
         graph, source, start_time)
 
-    assert int(arrival_times[target]) == 45923
-    assert int(travel_times[target]) == 2723
+    assert int(arrival_times[target]) == 45926
+    assert int(travel_times[target]) == 2726
 
 
 def test_connectivity_frequency(graph):

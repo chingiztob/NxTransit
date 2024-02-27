@@ -165,3 +165,5 @@ cache
 multiprocessing_tests.py
 tests_3.ipynb
 testing.ipynb
+prism.py
+.ai

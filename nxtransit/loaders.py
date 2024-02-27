@@ -10,7 +10,7 @@ import osmnx as ox
 import pandas as pd
 from shapely.geometry import LineString, Point
 
-from .connectors import _fill_coordinates, connect_stops_to_streets_utm
+from .connectors import _fill_coordinates, connect_stops_to_streets
 from .converters import parse_time_to_seconds
 
 
@@ -421,12 +421,12 @@ def feed_to_graph(
     # Combining OSM and GTFS data
     G_combined = nx.compose(G_transit, G_city)
 
-    # Filling UTM coordinates for graph nodes
+    # Filling projected coordinates for graph nodes
     _fill_coordinates(G_combined)
 
     print("Combining graphs")
     # Connecting stops to OSM streets
-    G_combined = connect_stops_to_streets_utm(G_combined, stops)
+    G_combined = connect_stops_to_streets(G_combined, stops)
 
     print(f'Number of nodes: {G_combined.number_of_nodes()}\n'
           f'Number of edges: {G_combined.number_of_edges()}\n'

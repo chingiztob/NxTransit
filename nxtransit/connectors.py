@@ -1,39 +1,37 @@
 """Tools for connecting GTFS stops to the nearest street node in the graph."""
 import pandas as pd
 import shapely.geometry
-import utm
 from scipy.spatial import KDTree
+from pyproj import Transformer, CRS
 
 
-def latlon_to_utm(lat, lon):
-    """
-    Convert coordinates from WGS84 (latitude, longitude) to rectangular UTM coordinates.
+def _fill_coordinates(graph):
+    
+    crs_4326 = CRS.from_epsg(4326)
+    crs_4087 = CRS.from_epsg(4087)
+    transformer = Transformer.from_crs(crs_4326, crs_4087)
 
-    Parameters
-    ----------
-    lat : float
-        Latitude in decimal degrees.
-    lon : float
-        Longitude in decimal degrees.
+    for node in graph.nodes():
+        try:
+            coords = transformer.transform(graph.nodes[node]['y'], graph.nodes[node]['x'])
 
-    Returns
-    -------
-    tuple
-        A tuple containing the UTM easting and northing coordinates in meters.
-    """
-    x, y, _, _ = utm.from_latlon(lat, lon)
-    return x, y
+            graph.nodes[node]['metric_X'] = coords[0]
+            graph.nodes[node]['metric_Y'] = coords[1]
+        except Exception:
+            continue
+
+    return graph
 
 
-def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
+def connect_stops_to_streets(graph, stops: pd.DataFrame):
     """
     Connects GTFS stops to the nearest street node in the graph
-    using rectangular UTM coordinates.
+    using projected coordinates in EPSG:4087.
     """
     # Create a list of street node tuples (x, y, node_id)
-    node_data = [(data['UTM_X'], data['UTM_Y'], n)
+    node_data = [(data['metric_X'], data['metric_Y'], n)
                  for n, data in graph.nodes(data=True)
-                 if 'UTM_X' in data and 'UTM_Y' in data
+                 if 'metric_X' in data and 'metric_Y' in data
                  and data['type'] == 'street']
 
     node_data_wgs = [(data['x'], data['y'], n)
@@ -48,7 +46,7 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
     for _, stop in stops.iterrows():
 
         stop_wgs = (stop['stop_lon'], stop['stop_lat'])
-        x, y = graph.nodes[stop['stop_id']]['UTM_X'], graph.nodes[stop['stop_id']]['UTM_Y']
+        x, y = graph.nodes[stop['stop_id']]['metric_X'], graph.nodes[stop['stop_id']]['metric_Y']
         stop_coords = (x, y)
 
         # query returns the distance to the nearest neighbor and its index in the tree
@@ -83,36 +81,6 @@ def connect_stops_to_streets_utm(graph, stops: pd.DataFrame):
     return graph
 
 
-def _fill_coordinates(graph):
-    """
-    Populates the UTM_X, and UTM_Y attributes of each node in the graph based on the stop coordinates.
-
-    Parameters
-    ----------
-    graph : networkx.Graph
-        NetworkX graph representing the transit system.
-    stops : pandas.DataFrame
-        DataFrame containing stop_id, stop_lat, and stop_lon columns.
-
-    Returns
-    -------
-    graph : networkx.Graph
-        NetworkX graph with updated node attributes.
-    """
-    for node in graph.nodes():
-        try:
-
-            UTM = latlon_to_utm(graph.nodes[node]['y'],
-                                graph.nodes[node]['x'])
-
-            graph.nodes[node]['UTM_X'] = UTM[0]
-            graph.nodes[node]['UTM_Y'] = UTM[1]
-        except Exception:
-            continue
-
-    return graph
-
-
 def snap_points_to_network(graph, points):
     """
     Snaps point features from GeoDataFrame to the nearest street node in the graph.
@@ -139,24 +107,29 @@ def snap_points_to_network(graph, points):
                  if 'y' in data and 'x' in data
                  and data['type'] == 'street']
 
-    node_data_utm = [(data['UTM_X'], data['UTM_Y'], n)
+    node_data_metric = [(data['metric_X'], data['metric_Y'], n)
                  for n, data in graph.nodes(data=True)
-                 if 'UTM_X' in data and 'UTM_Y' in data
+                 if 'metric_X' in data and 'metric_Y' in data
                  and data['type'] == 'street']
 
     # Create a KD-tree for nearest neighbor search
     # The tree is created from a list of street node tuples (x, y, node_id)
-    tree = KDTree([(x, y) for x, y, _ in node_data_utm])
+    tree = KDTree([(x, y) for x, y, _ in node_data_metric])
+    
+    crs_4326 = CRS.from_epsg(4326)
+    crs_4087 = CRS.from_epsg(4087)
+    transformer = Transformer.from_crs(crs_4326, crs_4087)
 
     for index, row in points.iterrows():
 
         geometry = row['geometry']
         id = row['origin_id']
-        pnt_utm_x, pnt_utm_y = latlon_to_utm(geometry.y, geometry.x)
+        
+        pnt_x, pnt_y = transformer.transform(geometry.y, geometry.x)
 
         # query returns the distance to the nearest neighbor and its index in the tree
-        distance, idx = tree.query((pnt_utm_x, pnt_utm_y))
-        nearest_street_node = node_data_utm[idx][2]
+        distance, idx = tree.query((pnt_x, pnt_y))
+        nearest_street_node = node_data_metric[idx][2]
 
         # Add a connector edge to the graph
         # The connection only happens if the found node is a street
