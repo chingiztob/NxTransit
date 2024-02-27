@@ -21,6 +21,10 @@ def _preprocess_schedules(graph: nx.DiGraph):
             edge[2]['sorted_schedules'] = sorted(
                 edge[2]['schedules'],
                 key=lambda x: x[0])
+            
+            edge[2]['departure_times'] = sorted([elem[0] for elem
+                                          in edge[2]['sorted_schedules']], 
+                                                key=lambda x: x)
 
 
 def _add_edges_to_graph(G: nx.MultiDiGraph,
@@ -72,9 +76,8 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
 
         if 'wheelchair_accessible' in trips_df.columns:
             wheelchair_accessible = trips_df.loc[
-                trips_df['trip_id']
-                == trip_id, 'wheelchair_accessible'
-                ].values[0]
+                trips_df['trip_id'] == trip_id, 
+                'wheelchair_accessible'].values[0]
         else:
             wheelchair_accessible = None
 
@@ -334,21 +337,19 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
                 del data[attribute]
 
     # Adding walking times on streets
-    walk_speed_mps = 1.39  # 5кмч
-    for _, _, _, data in G_city.edges(data=True, keys = True):
+    for u, v, key, data in G_city.edges(data=True, keys = True):
         distance = data['length']
-        walk_time = distance / walk_speed_mps
-        data['weight'] = walk_time
-        data['type'] = 'street'
 
-    for _, data in G_city.nodes(data = True):
+        data['weight'] = distance / 1.39
         data['type'] = 'street'
         
-    for u, v, key, data in G_city.edges(keys=True, data=True):
         u_geom = Point(G_city.nodes[u]['x'], G_city.nodes[u]['y'])
         v_geom = Point(G_city.nodes[v]['x'], G_city.nodes[v]['y'])
         data['geometry'] = LineString([u_geom, v_geom])
-        
+
+    for _, data in G_city.nodes(data = True):
+        data['type'] = 'street'
+
     if save_graphml:
         ox.save_graphml(G_city, path)
 

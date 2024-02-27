@@ -63,9 +63,7 @@ def connect_stops_to_streets(graph, stops: pd.DataFrame):
             street_geom = shapely.geometry.Point((node_data_wgs[idx][0], node_data_wgs[idx][1]))
             linestring = shapely.geometry.LineString([stop_geom, street_geom])
 
-            walk_speed_mps = 1.39
-            
-            walk_time = distance / walk_speed_mps
+            walk_time = distance / 1.39 # walk speed in m/s
 
             graph.add_edge(stop['stop_id'], nearest_street_node,
                            weight=walk_time,
@@ -140,8 +138,7 @@ def snap_points_to_network(graph, points):
                                                   node_data_wgs[idx][1]))
             linestring = shapely.geometry.LineString([geometry, street_geom])
 
-            walk_speed_mps = 1.39
-            walk_time = distance / walk_speed_mps
+            walk_time = distance / 1.39 # walk speed in m/s
 
             graph.add_node(id, x=geometry.x, y=geometry.y, type='snapped')
 

@@ -1,17 +1,19 @@
 import pytest
 from nxtransit.routers import _calculate_delay_sorted, _calculate_delay_hashed
 
-
+# This imitates the structure of NetworkX graph
 @pytest.fixture(scope='module')
 def graph():
     return {
         'A': {
             'B': {
-                'sorted_schedules': [
+                'sorted_schedules': 
+                    [
                     (10, 20, 'route_1', None),
                     (30, 40, 'route_2', None),
                     (50, 60, 'route_3', None),
-                ]
+                ], 
+                'departure_times': [10, 30, 50]
             }
         }
     }
