@@ -11,7 +11,7 @@ def _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair=
 
     if 'sorted_schedules' in graph[from_node][to_node]:
         schedules = graph[from_node][to_node]['sorted_schedules']
-        departure_times = [d[0] for d in schedules]
+        departure_times = graph[from_node][to_node]['departure_times']
         # Binary search to find the next departure time in the sorted list of schedules
         idx = bisect.bisect_left(departure_times, current_time)
         # If the next departure time exists, calculate the delay and route
