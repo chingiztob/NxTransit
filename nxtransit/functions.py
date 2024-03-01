@@ -290,7 +290,7 @@ def process_graph_to_hash_table(graph):
     Returns
     -------
     dict
-        A hash table representing the processed graph.
+        A dict mapping edges to their sorted schedules or static weights.
     """
     schedules_hash = {}
     for from_node, to_node, data in graph.edges(data=True):

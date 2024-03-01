@@ -67,7 +67,8 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
     queue = [(start_time, source)]
     visited = set()
     # Track used routes
-    routes = {node: None for node in graph.nodes}
+    routes = {}
+    #routes = {node: None for node in graph.nodes}
     
     # while the queue is not empty and the target node has not been visited
     # Пока очередь не пуста и целевой узел не посещен

@@ -216,7 +216,7 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
                                  crs="EPSG:4326")
     # Combine the GeoDataFrames
     merged_gdf = pd.concat([points_gdf, edges_gdf], ignore_index=True)
-
+    
     # Nodes and edges buffered and merged into a single polygon
     # Reprojection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
     buffer_gdf = merged_gdf.to_crs("EPSG:4087")
@@ -227,7 +227,6 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     # overlap_count is needed for percent_access calculation
     service_area_gdf = gpd.GeoDataFrame({'geometry': [service_area_polygon], 'id': source, 'overlap_count': 1}, 
                                         crs="EPSG:4087")
-    
     return service_area_gdf
 
 
@@ -279,8 +278,12 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
  
 def percent_access_service_area(graph, source, start_time, end_time, sample_interval, cutoff, buffer_radius, threshold, **kwargs):
     """
-    Calculate the percentage of access to the service area over a given time period.
-
+    Calculate service area reachable with spceified chance within the given time period.
+    
+    This tool rasterizes service areas for each time step and overlays them
+    Part of the raster that is covered by at least the threshold of 
+    the service areas is returned as a vectorized GeoDataFrame.
+    
     Parameters
     ----------
     graph : networkx.DiGraph

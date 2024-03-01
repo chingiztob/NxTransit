@@ -6,6 +6,15 @@ from pyproj import Transformer, CRS
 
 
 def _fill_coordinates(graph):
+    """
+    Transforms the coordinates of nodes in the graph from EPSG:4326 to EPSG:4087.
+    Populates 'metric_X' and 'metric_Y' attributes of the nodes.
+
+    Raises
+    ------
+    Exception
+        If an error occurs during coordinate transformation for a node.
+    """
     
     crs_4326 = CRS.from_epsg(4326)
     crs_4087 = CRS.from_epsg(4087)
@@ -17,8 +26,8 @@ def _fill_coordinates(graph):
 
             graph.nodes[node]['metric_X'] = coords[0]
             graph.nodes[node]['metric_Y'] = coords[1]
-        except Exception:
-            continue
+        except Exception as e:
+            raise Exception(f'{e} occurred for node {node}')
 
     return graph
 
