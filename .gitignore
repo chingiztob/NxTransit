@@ -159,11 +159,13 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Development files
+# Dev
 .vscode
 cache
 multiprocessing_tests.py
 tests_3.ipynb
 testing.ipynb
 prism.py
+
+# PT application analyzer
 .ai

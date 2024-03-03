@@ -280,7 +280,7 @@ def percent_access_service_area(graph, source, start_time, end_time, sample_inte
     """
     Calculate service area reachable with spceified chance within the given time period.
     
-    This tool rasterizes service areas for each time step and overlays them
+    This tool rasterizes service areas for each time step and overlays them.
     Part of the raster that is covered by at least the threshold of 
     the service areas is returned as a vectorized GeoDataFrame.
     

@@ -7,21 +7,20 @@ See the [documentation](https://nxtransit.readthedocs.io/en/latest/) for more in
 ## Key Features
 
 ### Multimodal Graph Creation
-NxTransit can generate a graph that integrates different modes of transportation within a city's street network. This offers a comprehensive view of the transit options available.
+NxTransit integrates transit data with OpenStreetMap (OSM) data to create a multimodal graph representing urban transit system.
 
 ### Time-Dependent Calculations
-The package enables the analysis of transit dynamics by considering the time-dependency of transit schedules. Users can perform calculations such as:
+The package enables the detailed analysis of transit systems by incorporating time-dependent nature of public transportation. This includes:
 
+- GTFS feed validation.
 - Calculating shortest paths with specific departure times.
 - Generating travel time matrices to evaluate travel durations between multiple network points.
-- Service areas calculation.
+- Calculation of service areas and "typical" service areas.
 - Frequency analysis.
 - More features are planned for future updates.
 
 ### GTFS Data Support
-NxTransit utilizes GTFS data, a common format for public transportation schedules and geographic information. This allows the package to be used across a variety of urban environments and transit systems.
-
-The package is primarily aimed at researchers in geography, transportation, urban studies, and similar fields.
+NxTransit utilizes GTFS data, a common format for public transportation schedules and geographic information.
 
 ### Installation
 ```bash
