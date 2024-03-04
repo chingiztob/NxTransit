@@ -194,6 +194,8 @@ def _unpack_path_vertices(path):
         if isinstance(vertex, int):
             current_sublist.append(vertex)
             
+        # if vertex is not an integer, it means that it is the end of the current pedestrian segment
+        # if current_sublist is not empty, push it to the pedestrian_path list
         elif current_sublist:
             pedestrian_path.append(current_sublist)
             current_sublist = []

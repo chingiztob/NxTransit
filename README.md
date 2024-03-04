@@ -1,5 +1,7 @@
 # NxTransit
 
+[![Documentation Status](https://readthedocs.org/projects/nxtransit/badge/?version=latest)](https://nxtransit.readthedocs.io/en/latest/?badge=latest)
+
 **NxTransit** is a Python package designed for creating and analyzing a multimodal graph representation of a city's transit system. It uses General Transit Feed Specification (GTFS) data to construct the graph and perform various time-dependent calculations.
 
 See the [documentation](https://nxtransit.readthedocs.io/en/latest/) for more information.
