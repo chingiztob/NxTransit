@@ -31,9 +31,9 @@ def edge_frequency(graph, start_time, end_time):
         if 'schedules' in edge[2]:
 
             trips = edge[2]['sorted_schedules']
-            seq = [(trips[i+1][0] - trips[i][0]) 
+            seq = [(trips[i+1][0] - trips[i][0])
                    for i in range(len(trips)-1)
-                   if trips[i][0] >= start_time and trips[i][0] <= end_time
+                   if start_time <= trips[i][0] <= end_time
                    ]  # list containing the headways between consecutive trips along the edge
 
             if len(seq) > 0:

@@ -133,7 +133,6 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
               f'{bytes_to_readable(expected_ram)}, memory avaliable '
               f'{bytes_to_readable(free_ram)}')
 
-    results = []
     time_start = time.perf_counter()
 
     with multiprocessing.Pool(processes=num_processes) as pool:
@@ -166,7 +165,7 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
         The graph to search.
     source : hashable
         The graph node to start the search from.
-    start_time : float
+    start_time : int
         The time to start the search from.
     cutoff : float
         The travel time cutoff for including nodes in the service area.
@@ -179,12 +178,13 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
         A GeoDataFrame containing the service area polygon.
     """
 
-    _, _, travel_times = single_source_time_dependent_dijkstra(graph, 
-                                                               source, 
-                                                               start_time, 
-                                                               hashtable, 
-                                                               algorithm
-                                                               )
+    _, _, travel_times = single_source_time_dependent_dijkstra(
+        graph, 
+        source,
+        start_time,
+        hashtable,
+        algorithm
+    )
 
     # Filter nodes that are reachable within the cutoff
     points_data = [{'node': node,

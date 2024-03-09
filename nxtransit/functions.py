@@ -174,7 +174,7 @@ def validate_feed(gtfs_path: str) -> bool:
         return False
 
     if critical_erorrs:
-        ("GTFS feed contains critical errors.")
+        print("GTFS feed contains critical errors.")
         return False
     else:
         print("GTFS feed is valid.")

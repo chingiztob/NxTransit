@@ -12,7 +12,7 @@ def _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair=
     if 'sorted_schedules' in graph[from_node][to_node]:
         schedules = graph[from_node][to_node]['sorted_schedules']
         departure_times = graph[from_node][to_node]['departure_times']
-        # Binary search to find the next departure time in the sorted list of schedules
+        # Binary search for the next departure time in the sorted list of schedules
         idx = bisect.bisect_left(departure_times, current_time)
         # If the next departure time exists, calculate the delay and route
         if idx < len(schedules):
@@ -131,7 +131,7 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
             used_routes = set()
             # Iterate over all nodes in the path
             for i in range(len(path) - 1):
-                u = path[i]
+                #u = path[i]
                 v = path[i + 1]
                 # Add route, used to go from node U to node V
                 used_routes.add(routes[v])
@@ -243,7 +243,7 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
         The node to start the search from.
     start_time : float
         The time to start the search from.
-    schedules_hash : dict
+    hashtable : dict
         A hash table for quick access to sorted schedules.
 
     Returns
@@ -321,5 +321,7 @@ def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashta
         arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_hashed(
             graph, source, start_time, hashtable
             )
+    else:
+        raise(ValueError, "Invalid algorithm. Use 'sorted' or 'hashed'")
 
     return arrival_times, predecessors, travel_times

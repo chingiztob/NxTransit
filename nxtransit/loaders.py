@@ -39,7 +39,7 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
 
     Parameters
     ----------
-    G : nx.MultiDiGraph
+    G : nx.DiGraph
         The networkx graph to which the edges will be added.
     sorted_stop_times : pd.DataFrame
         A DataFrame containing sorted stop times information.

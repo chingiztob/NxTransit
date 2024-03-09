@@ -161,6 +161,8 @@ cython_debug/
 
 # Dev
 .vscode
+.idea
+qodana.yaml
 cache
 multiprocessing_tests.py
 tests_3.ipynb
