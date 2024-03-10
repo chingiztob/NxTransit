@@ -47,6 +47,10 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
         The target node.
     start_time : float
         The starting time.
+    track_used_routes : bool, optional
+        If set to True, the algorithm will return a set of used transit routes.
+    wheelchair : bool, optional
+        If set to True, the algorithm will only use wheelchair accessible routes.
 
     Returns
     -------
@@ -68,8 +72,7 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
     visited = set()
     # Track used routes
     routes = {}
-    #routes = {node: None for node in graph.nodes}
-    
+
     # while the queue is not empty and the target node has not been visited
     # Пока очередь не пуста и целевой узел не посещен
     while queue:
@@ -131,7 +134,6 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
             used_routes = set()
             # Iterate over all nodes in the path
             for i in range(len(path) - 1):
-                #u = path[i]
                 v = path[i + 1]
                 # Add route, used to go from node U to node V
                 used_routes.add(routes[v])
@@ -198,7 +200,7 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     return arrival_times, predecessors, travel_times
 
 
-def _calculate_delay_hashed(from_node, to_node, current_time, hashtable, wheelchair =False):
+def _calculate_delay_hashed(from_node, to_node, current_time, hashtable, wheelchair=False):
     """
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
     Used in the time-dependent Dijkstra algorithm.
@@ -300,7 +302,7 @@ def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashta
     hashtable : dict, optional
         A hashtable for storing precomputed values. Required for 'hashed' algorithm.
     algorithm : str, optional
-        The algorithm to use for computing shortest paths. Can be 'sorted', 'hashed'. Defaults to 'sorted'.
+        The algorithm to use for computing the shortest paths. Can be 'sorted', 'hashed'. Defaults to 'sorted'.
         - Sorted: using binary search to find the next departure time in graph attributes (slowest)
         - Hashed: using a precomputed hashtable for quick access to sorted schedules. Works 20 - 30% faster than 'sorted'
 
@@ -322,6 +324,6 @@ def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashta
             graph, source, start_time, hashtable
             )
     else:
-        raise(ValueError, "Invalid algorithm. Use 'sorted' or 'hashed'")
+        raise (ValueError, "Invalid algorithm. Use 'sorted' or 'hashed'")
 
     return arrival_times, predecessors, travel_times

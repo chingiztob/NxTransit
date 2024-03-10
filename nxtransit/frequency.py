@@ -160,6 +160,10 @@ def single_source_connectivity_frequency(graph, source, start_time, end_time, sa
         The end time of the analysis period.
     sampling_interval : int or float
         The time interval at which to sample the connectivity.
+    algorithm : str, optional
+        The algorithm to use for the shortest path calculation. Options are 'sorted' and 'hashed'.
+    hashtable : dict, optional
+        Hashtable to use for the 'hashed' algorithm.
 
     Returns
     -------

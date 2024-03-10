@@ -3,6 +3,7 @@ import ctypes
 import platform
 import warnings
 
+
 # https://systemweakness.com/how-to-use-the-win32api-with-python3-3adde999211b
 def estimate_ram():
     """

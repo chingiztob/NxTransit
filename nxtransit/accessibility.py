@@ -15,7 +15,7 @@ from .other import bytes_to_readable, estimate_ram
 from .routers import single_source_time_dependent_dijkstra
 
 
-def calculate_OD_matrix(graph, nodes: list, departure_time: int,
+def calculate_od_matrix(graph, nodes: list, departure_time: int,
                         hashtable: dict = None, algorithm='sorted'
                         ):
     """
@@ -29,6 +29,10 @@ def calculate_OD_matrix(graph, nodes: list, departure_time: int,
         A list of node IDs in the graph.
     departure_time : int
         The departure time in seconds since midnight.
+    hashtable: dict, optional
+        Hash table for the graph.
+    algorithm: str, optional
+        Algorithm to use for the OD matrix calculation (default: 'sorted').
 
     Returns
     -------
@@ -69,7 +73,7 @@ def calculate_OD_matrix(graph, nodes: list, departure_time: int,
     return results_df
 
 
-def _calculate_OD_worker(source_node, nodes_list, graph, departure_time, hashtable=None):
+def _calculate_od_worker(source_node, nodes_list, graph, departure_time, hashtable=None):
     """
     Internal worker function to calculate the OD matrix for a single source node.
     """
@@ -91,7 +95,7 @@ def _calculate_OD_worker(source_node, nodes_list, graph, departure_time, hashtab
     } for dest_node in nodes_list if dest_node in arrival_times]
 
 
-def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, hashtable=None):
+def calculate_od_matrix_parallel(graph, nodes, departure_time, num_processes=2, hashtable=None):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, 
     nodes, and departure time using parallel processing.
@@ -130,14 +134,14 @@ def calculate_OD_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
                           f'memory {bytes_to_readable(free_ram)}')
     else:
         print(f'Graph size {bytes_to_readable(graph_size)}, expected costs '
-              f'{bytes_to_readable(expected_ram)}, memory avaliable '
+              f'{bytes_to_readable(expected_ram)}, memory available '
               f'{bytes_to_readable(free_ram)}')
 
     time_start = time.perf_counter()
 
     with multiprocessing.Pool(processes=num_processes) as pool:
         # Fixing the arguments of the calculate_OD_worker function for nodes list
-        partial_worker = partial(_calculate_OD_worker, 
+        partial_worker = partial(_calculate_od_worker,
                                  nodes_list=nodes, 
                                  graph=graph, 
                                  departure_time=departure_time,
@@ -171,6 +175,10 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
         The travel time cutoff for including nodes in the service area.
     buffer_radius : float
         The radius in meters for buffering around each point.
+    algorithm : str, optional
+        Algorithm to use for the service area calculation (default: 'sorted').
+    hashtable : dict, optional
+        Hashtable required for the algorithm.
 
     Returns
     -------
@@ -192,9 +200,9 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
                         graph.nodes[node]['x'],
                         graph.nodes[node]['y']
                         ),
-                    'travel_time': time}
-                   for node, time in travel_times.items()
-                   if time <= cutoff
+                    'travel_time': travel_time}
+                   for node, travel_time in travel_times.items()
+                   if travel_time <= cutoff
                    and 'x' in graph.nodes[node]
                    and 'y' in graph.nodes[node]]
     
@@ -218,7 +226,7 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     merged_gdf = pd.concat([points_gdf, edges_gdf], ignore_index=True)
     
     # Nodes and edges buffered and merged into a single polygon
-    # Reprojection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
+    # Re-projection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
     buffer_gdf = merged_gdf.to_crs("EPSG:4087")
     buffer_gdf['geometry'] = buffer_gdf.buffer(buffer_radius)
 
@@ -260,7 +268,7 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
 
         rasters.append(cube)
     
-    # Combine the rasters into 3 dimensional xarray DataSet
+    # Combine the rasters into 3-dimensional xarray DataSet
     # Then sum the values along the 'summary' dimension
     summarized_raster = xr.concat(rasters, dim='summary').sum(dim='summary')
 
@@ -278,9 +286,9 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
  
 def percent_access_service_area(graph, source, start_time, end_time, sample_interval, cutoff, buffer_radius, threshold, **kwargs):
     """
-    Calculate service area reachable with spceified chance within the given time period.
+    Calculate service area reachable with specified chance within the given time period.
     
-    This tool rasterizes service areas for each time step and overlays them.
+    This tool rasterize service areas for each time step and overlays them.
     Part of the raster that is covered by at least the threshold of 
     the service areas is returned as a vectorized GeoDataFrame.
     

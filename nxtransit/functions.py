@@ -107,7 +107,7 @@ def validate_feed(gtfs_path: str) -> bool:
         stop_times_df = pd.read_csv(os.path.join(gtfs_path, "stop_times.txt"), low_memory=False)
         calendar_df = pd.read_csv(os.path.join(gtfs_path, "calendar.txt"))
         
-        critical_erorrs = False
+        critical_errors = False
 
         # Validate agency.txt
         if agency_df.empty or 'agency_id' not in agency_df.columns:
@@ -116,30 +116,30 @@ def validate_feed(gtfs_path: str) -> bool:
         # Validate stops.txt
         if stops_df.empty or 'stop_id' not in stops_df.columns:
             print("stops.txt is invalid or missing required 'stop_id' column.")
-            critical_erorrs = True
+            critical_errors = True
 
         # Validate routes.txt
         if routes_df.empty or 'route_id' not in routes_df.columns or 'route_id' not in routes_df.columns:
             print("routes.txt is invalid or missing required columns (agency_id, route_id).")
-            critical_erorrs = True
+            critical_errors = True
             
         if not set(routes_df['agency_id']).issubset(set(agency_df['agency_id'])):
             print("Mismatch in agency IDs between routes and agency files.")
-            critical_erorrs = True
+            critical_errors = True
             
         # Validate trips.txt
         if trips_df.empty or 'trip_id' not in trips_df.columns or 'route_id' not in trips_df.columns:
             print("trips.txt is invalid or missing required columns.")
-            critical_erorrs = True
+            critical_errors = True
 
         if not set(trips_df['route_id']).issubset(set(routes_df['route_id'])):
             print("Mismatch in route IDs between trips and routes files.")
-            critical_erorrs = True
+            critical_errors = True
             
         # Validate stop_times.txt
         if stop_times_df.empty or 'trip_id' not in stop_times_df.columns or 'stop_id' not in stop_times_df.columns:
             print("stop_times.txt is invalid or missing required columns.")
-            critical_erorrs = True
+            critical_errors = True
 
         if not set(stop_times_df['trip_id']).issubset(set(trips_df['trip_id'])):
             print("Mismatch in trip IDs between stop_times and trips files.")
@@ -173,7 +173,7 @@ def validate_feed(gtfs_path: str) -> bool:
         print(f"Error during validation: {e}")
         return False
 
-    if critical_erorrs:
+    if critical_errors:
         print("GTFS feed contains critical errors.")
         return False
     else:
@@ -263,7 +263,7 @@ def separate_travel_times(graph, predecessors: dict, travel_times: dict, source)
     
     results = []
     
-    for node in tqdm.tqdm(graph.nodes(data = True)):
+    for node in tqdm.tqdm(graph.nodes(data=True)):
         
         if node[0] != source:
 

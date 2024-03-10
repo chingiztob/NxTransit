@@ -17,8 +17,8 @@ from .loaders import feed_to_graph
 from .routers import time_dependent_dijkstra
 from .routers import single_source_time_dependent_dijkstra
 
-from .accessibility import calculate_OD_matrix
-from .accessibility import calculate_OD_matrix_parallel
+from .accessibility import calculate_od_matrix
+from .accessibility import calculate_od_matrix_parallel
 from .accessibility import service_area
 from .accessibility import service_area_multiple_sources
 from .accessibility import percent_access_service_area

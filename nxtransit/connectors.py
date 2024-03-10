@@ -72,7 +72,7 @@ def connect_stops_to_streets(graph, stops: pd.DataFrame):
             street_geom = shapely.geometry.Point((node_data_wgs[idx][0], node_data_wgs[idx][1]))
             linestring = shapely.geometry.LineString([stop_geom, street_geom])
 
-            walk_time = distance / 1.39 # walk speed in m/s
+            walk_time = distance / 1.39  # walk speed in m/s
 
             graph.add_edge(stop['stop_id'], nearest_street_node,
                            weight=walk_time,
@@ -109,15 +109,19 @@ def snap_points_to_network(graph, points):
     points CRS must be EPSG:4326
     """
     # Create a list of street node tuples (x, y, node_id)
-    node_data_wgs = [(data['x'], data['y'], n)
-                 for n, data in graph.nodes(data=True)
-                 if 'y' in data and 'x' in data
-                 and data['type'] == 'street']
+    node_data_wgs = [
+        (data['x'], data['y'], n)
+        for n, data in graph.nodes(data=True)
+        if 'y' in data and 'x' in data
+        and data['type'] == 'street'
+    ]
 
-    node_data_metric = [(data['metric_X'], data['metric_Y'], n)
-                 for n, data in graph.nodes(data=True)
-                 if 'metric_X' in data and 'metric_Y' in data
-                 and data['type'] == 'street']
+    node_data_metric = [
+        (data['metric_X'], data['metric_Y'], n)
+        for n, data in graph.nodes(data=True)
+        if 'metric_X' in data and 'metric_Y' in data
+        and data['type'] == 'street'
+    ]
 
     # Create a KD-tree for nearest neighbor search
     # The tree is created from a list of street node tuples (x, y, node_id)
@@ -130,8 +134,7 @@ def snap_points_to_network(graph, points):
     for index, row in points.iterrows():
 
         geometry = row['geometry']
-        id = row['origin_id']
-        
+        point_id = row['origin_id']
         pnt_x, pnt_y = transformer.transform(geometry.y, geometry.x)
 
         # query returns the distance to the nearest neighbor and its index in the tree
@@ -147,16 +150,16 @@ def snap_points_to_network(graph, points):
                                                   node_data_wgs[idx][1]))
             linestring = shapely.geometry.LineString([geometry, street_geom])
 
-            walk_time = distance / 1.39 # walk speed in m/s
+            walk_time = distance / 1.39  # walk speed in m/s
 
-            graph.add_node(id, x=geometry.x, y=geometry.y, type='snapped')
+            graph.add_node(point_id, x=geometry.x, y=geometry.y, type='snapped')
 
-            graph.add_edge(id, nearest_street_node,
+            graph.add_edge(point_id, nearest_street_node,
                            weight=walk_time,
                            type='connector',
                            geometry=linestring
                            )
-            graph.add_edge(nearest_street_node, id,
+            graph.add_edge(nearest_street_node, point_id,
                            weight=walk_time,
                            type='connector',
                            geometry=linestring

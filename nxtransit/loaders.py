@@ -21,13 +21,13 @@ def _preprocess_schedules(graph: nx.DiGraph):
             edge[2]['sorted_schedules'] = sorted(
                 edge[2]['schedules'],
                 key=lambda x: x[0])
-            
+
             edge[2]['departure_times'] = sorted([elem[0] for elem
-                                          in edge[2]['sorted_schedules']], 
+                                                 in edge[2]['sorted_schedules']],
                                                 key=lambda x: x)
 
 
-def _add_edges_to_graph(G: nx.MultiDiGraph,
+def _add_edges_to_graph(graph: nx.DiGraph,
                         sorted_stop_times: pd.DataFrame,
                         trips_df: pd.DataFrame,
                         shapes: dict,
@@ -39,7 +39,7 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
 
     Parameters
     ----------
-    G : nx.DiGraph
+    graph : nx.DiGraph
         The networkx graph to which the edges will be added.
     sorted_stop_times : pd.DataFrame
         A DataFrame containing sorted stop times information.
@@ -92,15 +92,17 @@ def _add_edges_to_graph(G: nx.MultiDiGraph,
         # if edge already exists, add schedule to the list of schedules
         # Currently the geometry is added to the first edge found
 
-        if G.has_edge(*edge):
-            G[edge[0]][edge[1]]['schedules'].append(schedule_info)
+        if graph.has_edge(*edge):
+            graph[edge[0]][edge[1]]['schedules'].append(schedule_info)
         # Create a new edge otherwise
         else:
             if read_shapes:
-                G.add_edge(*edge, schedules=[schedule_info],
-                           type='transit', geometry=geometry)
+                graph.add_edge(
+                    *edge, schedules=[schedule_info],
+                    type='transit', geometry=geometry
+                )
             else:
-                G.add_edge(*edge, schedules=[schedule_info], type='transit')
+                graph.add_edge(*edge, schedules=[schedule_info], type='transit')
 
 
 def _add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map):
@@ -130,13 +132,13 @@ def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, du
 
 
 def _load_GTFS(
-    GTFSpath: str,
-    departure_time_input: str,
-    day_of_week: str,
-    duration_seconds,
-    read_shapes=False,
-    multiprocessing=False
-    ):
+        GTFSpath: str,
+        departure_time_input: str,
+        day_of_week: str,
+        duration_seconds,
+        read_shapes=False,
+        multiprocessing=False
+) -> tuple[nx.DiGraph, pd.DataFrame]:
     """
     Loads GTFS data from the specified directory path and returns a graph and a dataframe of stops.
     The function uses parallel processing to speed up data loading.
@@ -292,12 +294,14 @@ def _load_GTFS(
         # For each group, sort by stop_sequence, then add edges to the graph
         for trip_id, group in filtered_stops.groupby('trip_id'):
             sorted_group = group.sort_values('stop_sequence')
-            _add_edges_to_graph(G,
-                                sorted_group,
-                                trips_df = trips_df,
-                                shapes = shapes,
-                                read_shapes = read_shapes,
-                                trip_to_shape_map = trip_to_shape_map)
+            _add_edges_to_graph(
+                G,
+                sorted_group,
+                trips_df = trips_df,
+                shapes = shapes,
+                read_shapes = read_shapes,
+                trip_to_shape_map = trip_to_shape_map
+            )
 
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(G)
