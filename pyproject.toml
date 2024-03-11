@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "NxTransit_beta"
+name = "NxTransit"
 version = "0.1.18"
 description = "Construct and analyze time-dependent transit networks from GTFS data"
 authors = [{ name = "Chingiz Zhanarbaev" }]
@@ -32,8 +32,5 @@ tests = [
 packages = ["nxtransit"]
 
 # python -m build
-
 # twine upload dist/*
 # twine upload --repository testpypi dist/*
-
-# pip install --index-url https://test.pypi.org/simple/ NxTransit_beta
