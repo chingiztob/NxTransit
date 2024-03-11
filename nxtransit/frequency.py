@@ -143,7 +143,10 @@ def connectivity_frequency(graph, source, target, start_time, end_time, sampling
     return mean_interval_between_peaks
 
 
-def single_source_connectivity_frequency(graph, source, start_time, end_time, sampling_interval=60, hashtable=None, algorithm='sorted'):
+def single_source_connectivity_frequency(
+        graph, source, start_time, end_time,
+        sampling_interval=60, hashtable=None, algorithm='sorted'
+):
     """
     Calculates the mean interval between peaks in travel times from a source node to all other nodes
     in a graph over a specified time period.

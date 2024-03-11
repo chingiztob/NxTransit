@@ -6,13 +6,13 @@ import tqdm
 from shapely.geometry import Polygon
 
 
-def create_grid(geodataframe, cell_size):
+def create_grid(gdf, cell_size):
     """
     Creates a grid within the bounding box of a GeoDataFrame.
 
     Parameters
     ----------
-    geodataframe : GeoDataFrame
+    gdf : gpd.GeoDataFrame
         GeoDataFrame containing the geometry to be gridded.
     cell_size : float
         Size of the grid cells in the meters.
@@ -23,8 +23,8 @@ def create_grid(geodataframe, cell_size):
         Polygon grid.
     """
 
-    geodataframe = geodataframe.to_crs("EPSG:4087")  # Project to metric CRS for accurate cell size
-    xmin, ymin, xmax, ymax = geodataframe.total_bounds
+    gdf = gdf.to_crs("EPSG:4087")  # Project to metric CRS for accurate cell size
+    xmin, ymin, xmax, ymax = gdf.total_bounds
     rows = int((ymax - ymin) / cell_size)
     cols = int((xmax - xmin) / cell_size)
     grid = []

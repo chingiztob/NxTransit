@@ -1,22 +1,26 @@
+from pathlib import Path
+
 import pytest
 import nxtransit as tr
 
 
 # Zheleznogorsk feed by github.com/gammapopolam
-GTFSpath = r"tests/test_data/Zhelez"  # Path to GTFS feed
-graphml_path = r"tests/test_data/Zhelez.graphml"  # Path to graphml file
+GTFSpath = Path("tests/test_data/Zhelez")
+graphml_path = Path("tests/test_data/Zhelez.graphml")
 departure_time_input = "12:00:00"  # Departure time in HH:MM:SS format
 day = 'monday'  # day of the week in lower case
 
 
 @pytest.fixture(scope="module")
 def graph():
-    G, _ = tr.feed_to_graph(GTFSpath,
-                            departure_time_input,
-                            day,
-                            duration_seconds=3600*3,
-                            read_shapes=False,
-                            multiprocessing=True)
+    G, _ = tr.feed_to_graph(
+        GTFSpath,
+        departure_time_input,
+        day,
+        duration_seconds=3600*3,
+        read_shapes=False,
+        multiprocessing=True
+    )
 
     return G
 

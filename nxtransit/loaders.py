@@ -12,6 +12,7 @@ from shapely.geometry import LineString, Point
 
 from .connectors import _fill_coordinates, connect_stops_to_streets
 from .converters import parse_time_to_seconds
+from .other import logger
 
 
 def _preprocess_schedules(graph: nx.DiGraph):
@@ -252,7 +253,7 @@ def _load_GTFS(
         # Create a pool of processes
         with mp.Pool(processes=num_cores) as pool:
             # Create a subgraph in each process
-            # Each process will return a graph with edges for a subset of trips
+            # Each will return a graph with edges for a subset of trips
             # The results will be combined into a single graph
             results = pool.starmap(_add_edges_parallel,
                                    [(G, chunk, trips_df, shapes,
@@ -278,12 +279,11 @@ def _load_GTFS(
                     # Add new edge with data
                     merged_graph.add_edge(u, v, **data)
 
-        print(f'Building graph in parallel complete in {time.perf_counter() - timestamp} seconds')
-
+        logger.info(f'Building graph in parallel complete in {time.perf_counter() - timestamp} seconds')
+        
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(merged_graph)
-
-        print('Transit graph created')
+        logger.info('New Transit graph created')
 
         return merged_graph, stops_df
 
@@ -306,12 +306,12 @@ def _load_GTFS(
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(G)
 
-        print('Transit graph created')
+        logger.info('Transit graph created')
 
         return G, stops_df
 
 
-def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
+def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
     """
     Loads OpenStreetMap data within a convex hull of stops in GTFS feed, 
     creates a street network graph, and adds walking times as edge weights.
@@ -327,12 +327,12 @@ def _load_osm(stops, save_graphml, path)-> nx.DiGraph:
          in zip(stops['stop_lon'], stops['stop_lat'])
          ]).unary_union.convex_hull
 
-    print('Loading OSM graph via OSMNX')
+    logger.info('Loading OSM graph via OSMNX')
     # Loading OSM data within the convex hull
     G_city = ox.graph_from_polygon(boundary,
                                    network_type='walk',
                                    simplify=True)
-    print('Street network graph created')
+    logger.info('Street network graph created')
 
     for u, v, key, data in G_city.edges(keys=True, data=True):
         attributes_to_keep = {'length', 'highway', 'name'}
@@ -429,12 +429,12 @@ def feed_to_graph(
     # Filling projected coordinates for graph nodes
     _fill_coordinates(G_combined)
 
-    print("Combining graphs")
     # Connecting stops to OSM streets
     G_combined = connect_stops_to_streets(G_combined, stops)
 
-    print(f'Number of nodes: {G_combined.number_of_nodes()}\n'
-          f'Number of edges: {G_combined.number_of_edges()}\n'
-          'Connecting stops to streets complete')
+    logger.info(
+        f'Number of nodes: {G_combined.number_of_nodes()}\n'
+        f'Number of edges: {G_combined.number_of_edges()}\n'
+    )
 
     return G_combined, stops

@@ -64,7 +64,7 @@ def calculate_od_matrix(graph, nodes: list, departure_time: int,
                      'source_node': source_node,
                      'destination_node': dest_node,
                      'arrival_time': arrival_times[dest_node],
-                     'travel_time': travel_times.get(dest_node, None)  # Use .get() to avoid KeyError if the key is not found
+                     'travel_time': travel_times.get(dest_node, None)  # .get() to avoid KeyError
                      })
 
     # Convert the list of results to a DataFrame and to a csv file
@@ -120,8 +120,6 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
     """
     print(f'Calculating the OD using {num_processes} processes')
 
-    # Assuming functions asizeof and estimate_ram are defined elsewhere to estimate RAM usage
-    # If not, remove these checks or implement equivalent functionality
     graph_size = asizeof.asizeof(graph)
     ram, free_ram = estimate_ram()
     expected_ram = graph_size * 5 + num_processes * graph_size * 2.5
@@ -284,7 +282,17 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
     return result_gdf
  
  
-def percent_access_service_area(graph, source, start_time, end_time, sample_interval, cutoff, buffer_radius, threshold, **kwargs):
+def percent_access_service_area(
+        graph,
+        source,
+        start_time,
+        end_time,
+        sample_interval,
+        cutoff,
+        buffer_radius,
+        threshold,
+        **kwargs
+):
     """
     Calculate service area reachable with specified chance within the given time period.
     
@@ -330,7 +338,16 @@ def percent_access_service_area(graph, source, start_time, end_time, sample_inte
     return mean_area
     
  
-def service_area_multiple_sources(graph, sources, start_time, cutoff, buffer_radius, algorithm='sorted', hashtable=None, num_processes=6):
+def service_area_multiple_sources(
+        graph,
+        sources,
+        start_time,
+        cutoff,
+        buffer_radius,
+        algorithm='sorted',
+        hashtable=None,
+        num_processes=6
+):
     """
     Calculates service areas for multiple sources using multiprocessing, returning a combined service area polygon.
 

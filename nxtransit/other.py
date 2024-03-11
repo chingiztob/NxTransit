@@ -2,6 +2,7 @@
 import ctypes
 import platform
 import warnings
+import logging
 
 
 # https://systemweakness.com/how-to-use-the-win32api-with-python3-3adde999211b
@@ -67,3 +68,11 @@ def bytes_to_readable(bytes):
         return f"{bytes / (1024 ** 2):.2f} MB"
     else:
         return f"{bytes / (1024 ** 3):.2f} GB"
+
+
+# Set up console logging for the package
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
