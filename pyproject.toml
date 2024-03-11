@@ -4,9 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "NxTransit"
-version = "0.1.18"
+version = "0.1.18.1"
 description = "Construct and analyze time-dependent transit networks from GTFS data"
 authors = [{ name = "Chingiz Zhanarbaev" }]
+readme = "README.md" 
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
 dependencies = [
     "geopandas>=0.14.0",
     "networkx>=3.2.0",
