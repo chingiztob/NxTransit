@@ -37,3 +37,4 @@ source_suffix = ".rst"
 html_theme = 'furo'
 html_static_path = []
 nb_execution_timeout = 60
+nb_execution_mode = "off"
