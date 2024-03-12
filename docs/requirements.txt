@@ -1,5 +1,5 @@
-furo
 myst_nb
+sphinx-book-theme
 sphinx == 7.2.6
 geopandas>=0.14.0
 networkx>=3.2.0
