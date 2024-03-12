@@ -190,6 +190,8 @@ def _unpack_path_vertices(path):
     pedestrian_path = []
     current_sublist = []
     
+    # Transit verteces are always float or string (idk why lol)
+    # while pedestrian verteces (osmid) are integers
     for vertex in path:
         if isinstance(vertex, int):
             current_sublist.append(vertex)

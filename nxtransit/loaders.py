@@ -316,9 +316,18 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
     Loads OpenStreetMap data within a convex hull of stops in GTFS feed, 
     creates a street network graph, and adds walking times as edge weights.
 
+    Parameters
+    ----------
+    stops : pandas.DataFrame
+        DataFrame containing the stops information from the GTFS feed.
+    save_graphml : bool
+        Flag indicating whether to save the resulting graph as a GraphML file.
+    path : str
+        The file path to save the GraphML file (if save_graphml is True).
+
     Returns
     -------
-    G_city : networkx.MultiDigraph
+    G_city : networkx.DiGraph
         A street network graph with walking times as edge weights.
     """
     # Building a convex hull from stop coordinates for OSM loading
@@ -341,7 +350,7 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
                 del data[attribute]
 
     # Adding walking times on streets
-    for u, v, key, data in G_city.edges(data=True, keys = True):
+    for u, v, key, data in G_city.edges(data=True, keys=True):
         distance = data['length']
 
         data['weight'] = distance / 1.39
@@ -351,7 +360,7 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
         v_geom = Point(G_city.nodes[v]['x'], G_city.nodes[v]['y'])
         data['geometry'] = LineString([u_geom, v_geom])
 
-    for _, data in G_city.nodes(data = True):
+    for _, data in G_city.nodes(data=True):
         data['type'] = 'street'
 
     if save_graphml:

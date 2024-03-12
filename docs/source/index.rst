@@ -3,6 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. meta::
+    :description: NxTransit integrates GTFS data with OSM to create a time-dependent, multimodal urban transit graph for advanced transportation analysis.
+    :keywords: GTFS, transit, transportation, multimodal, graph, analysis, urban, public transportation, OSM, OpenStreetMap
+
 NxTransit |version|
 ===================
 
@@ -38,16 +42,23 @@ Installation
 
     pip install NxTransit
 
+Repository
+----------
+You can find the source NxTransit Repository on `GitHub`_.
+
+.. _GitHub: https://github.com/chingiztob/NxTransit
+
+Documentation
+-------------
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
 
    examples
    NxTransit
+   internals
 
 Indices and tables
-==================
-
+------------------
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
