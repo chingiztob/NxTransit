@@ -21,7 +21,9 @@ version = release = _version.__version__
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.autodoc","sphinx.ext.napoleon"]
+extensions = ["sphinx.ext.autodoc",
+              "sphinx.ext.napoleon",
+              "myst_nb"]
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -34,3 +36,4 @@ source_suffix = ".rst"
 
 html_theme = 'furo'
 html_static_path = []
+nb_execution_timeout = 60

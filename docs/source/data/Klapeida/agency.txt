@@ -1,0 +1,7 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_phone,agency_lang
+kautra,Kautra,http://www.klaipedatransport.lt,Europe/Vilnius,8 800 12344,lt
+ridvija,Ridvija,http://www.klaipedatransport.lt,Europe/Vilnius,8 800 12344,lt
+ap,AP,http://www.klaipedatransport.lt,Europe/Vilnius,8 800 12344,lt
+pa,PA,http://www.klaipedatransport.lt,Europe/Vilnius,8 800 12344,lt
+gv,GV,http://www.klaipedatransport.lt,Europe/Vilnius,8 800 12344,lt
+ak,AK,http://www.klaipedatransport.lt,Europe/Vilnius,8 800 12344,lt
