@@ -53,9 +53,10 @@ Documentation
 .. toctree::
    :maxdepth: 1
 
-   examples
    NxTransit
    internals
+   examples_basic
+   examples_h3
 
 Indices and tables
 ------------------

@@ -185,7 +185,9 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
         current_time, current_node = heappop(queue)
 
         for neighbor in graph.neighbors(current_node):
-            delay, _ = _calculate_delay_sorted(graph, current_node, neighbor, current_time)
+            delay, _ = _calculate_delay_sorted(
+                graph, current_node, neighbor, current_time
+                )
             new_arrival_time = current_time + delay
 
             if new_arrival_time < arrival_times[neighbor]:
@@ -255,6 +257,10 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
             - travel_times: A dictionary mapping each node to the travel time from the source node.
+    
+    See Also
+    --------
+    nxtransit.functions.process_graph_to_hash_table : Create a hash table for quick access to sorted schedules.
     """
     if hashtable is None:
         raise ValueError("The hash table is required for this algorithm.")
@@ -313,6 +319,10 @@ def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashta
             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
             - travel_times: A dictionary mapping each node to the travel time from the source node.
+            
+    See Also
+    --------
+    nxtransit.functions.process_graph_to_hash_table : Create a hash table for quick access to sorted schedules.
     """
 
     if algorithm == 'sorted':

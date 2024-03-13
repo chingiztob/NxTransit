@@ -52,7 +52,7 @@ def connect_stops_to_streets(graph, stops: pd.DataFrame):
     # The tree is created from a list of street node tuples (x, y, node_id)
     tree = KDTree([(x, y) for x, y, _ in node_data])
 
-    for _, stop in stops.iterrows():
+    for index, stop in stops.iterrows():
 
         stop_wgs = (stop['stop_lon'], stop['stop_lat'])
         x, y = graph.nodes[stop['stop_id']]['metric_X'], graph.nodes[stop['stop_id']]['metric_Y']
@@ -63,27 +63,23 @@ def connect_stops_to_streets(graph, stops: pd.DataFrame):
         nearest_street_node = node_data[idx][2]
 
         # Add a connector edge to the graph
-        # The connection only happens if the found node is a street
-        # Maybe this additional check is not needed
-        if graph.nodes[nearest_street_node]['type'] == 'street':  # Соединение
+        # Create a LineString geometry for the connector edge
+        stop_geom = shapely.geometry.Point(stop_wgs)
+        street_geom = shapely.geometry.Point((node_data_wgs[idx][0], node_data_wgs[idx][1]))
+        linestring = shapely.geometry.LineString([stop_geom, street_geom])
 
-            # Создаем геометрию ребра в формате Shapely LineString
-            stop_geom = shapely.geometry.Point(stop_wgs)
-            street_geom = shapely.geometry.Point((node_data_wgs[idx][0], node_data_wgs[idx][1]))
-            linestring = shapely.geometry.LineString([stop_geom, street_geom])
+        walk_time = distance / 1.39  # walk speed in m/s
 
-            walk_time = distance / 1.39  # walk speed in m/s
-
-            graph.add_edge(stop['stop_id'], nearest_street_node,
-                           weight=walk_time,
-                           type='connector',
-                           geometry=linestring
-                           )
-            graph.add_edge(nearest_street_node, stop['stop_id'],
-                           weight=walk_time,
-                           type='connector',
-                           geometry=linestring
-                           )
+        graph.add_edge(stop['stop_id'], nearest_street_node,
+                        weight=walk_time,
+                        type='connector',
+                        geometry=linestring
+                        )
+        graph.add_edge(nearest_street_node, stop['stop_id'],
+                        weight=walk_time,
+                        type='connector',
+                        geometry=linestring
+                        )
 
     return graph
 
@@ -142,27 +138,24 @@ def snap_points_to_network(graph, points):
         nearest_street_node = node_data_metric[idx][2]
 
         # Add a connector edge to the graph
-        # The connection only happens if the found node is a street
-        # Maybe this additional check is not needed
-        if graph.nodes[nearest_street_node]['type'] == 'street':
-            # Создаем геометрию ребра в формате Shapely LineString
-            street_geom = shapely.geometry.Point((node_data_wgs[idx][0],
-                                                  node_data_wgs[idx][1]))
-            linestring = shapely.geometry.LineString([geometry, street_geom])
+        # Create a LineString geometry for the connector edge
+        street_geom = shapely.geometry.Point((node_data_wgs[idx][0],
+                                                node_data_wgs[idx][1]))
+        linestring = shapely.geometry.LineString([geometry, street_geom])
 
-            walk_time = distance / 1.39  # walk speed in m/s
+        walk_time = distance / 1.39  # walk speed in m/s
 
-            graph.add_node(point_id, x=geometry.x, y=geometry.y, type='snapped')
+        graph.add_node(point_id, x=geometry.x, y=geometry.y, type='snapped')
 
-            graph.add_edge(point_id, nearest_street_node,
-                           weight=walk_time,
-                           type='connector',
-                           geometry=linestring
-                           )
-            graph.add_edge(nearest_street_node, point_id,
-                           weight=walk_time,
-                           type='connector',
-                           geometry=linestring
-                           )
+        graph.add_edge(point_id, nearest_street_node,
+                        weight=walk_time,
+                        type='connector',
+                        geometry=linestring
+                        )
+        graph.add_edge(nearest_street_node, point_id,
+                        weight=walk_time,
+                        type='connector',
+                        geometry=linestring
+                        )
 
     return graph

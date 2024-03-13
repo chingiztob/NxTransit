@@ -23,6 +23,7 @@ version = release = _version.__version__
 
 extensions = ["sphinx.ext.autodoc",
               "sphinx.ext.napoleon",
+              "sphinx.ext.viewcode",
               "myst_nb"]
 
 templates_path = ['_templates']
@@ -37,3 +38,9 @@ source_suffix = ".rst"
 html_theme = 'sphinx_book_theme'
 html_static_path = []
 nb_execution_mode = "off"
+
+html_theme_options = {
+    "repository_provider": "github",
+    "repository_url": "https://github.com/chingiztob/NxTransit",
+    "use_repository_button": True,
+}
