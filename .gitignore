@@ -157,17 +157,14 @@ cython_debug/
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+.idea/
 
 # Dev
 .vscode
-.idea
+*_dev.py
+*_dev.ipynb
 qodana.yaml
 cache
-multiprocessing_tests.py
-tests_3.ipynb
-testing.ipynb
-testing_4.ipynb
 prism.py
 
 # PT application analyzer

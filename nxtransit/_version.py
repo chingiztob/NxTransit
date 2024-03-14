@@ -1,3 +1,3 @@
 """NxTransit package version information."""
 
-__version__ = "0.1.18.1"
+__version__ = "0.1.18.2"
