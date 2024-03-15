@@ -157,5 +157,3 @@ def snap_points_to_network(graph, points):
                         type='connector',
                         geometry=linestring
                         )
-
-    return graph
