@@ -97,8 +97,7 @@ def snap_points_to_network(graph, points):
 
     Returns
     -------
-        graph: networkx.Graph
-            NetworkX graph with added snapped points as nodes.
+        None. The input graph is modified in-place with added snapped points as nodes.
     
     Notes
     -----

@@ -74,21 +74,16 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
     routes = {}
 
     # while the queue is not empty and the target node has not been visited
-    # Пока очередь не пуста и целевой узел не посещен
     while queue:
         # Extract the node with the smallest arrival time from the queue
-        # Извлечение узла с наименьшим временем прибытия в очереди
         current_time, u = heappop(queue)
         # If the node is the target, stop the execution
-        # Если узел является целевым, прекратить выполнение
         if u == target:
             break
         # If the node has already been visited with a better result, skip it
-        # Если узел уже посещен с лучшим результатом, пропустить его
         if u in visited and current_time > arrival_times[u]:
             continue
         # Add the node to the visited set to avoid visiting it again
-        # Добавить узел в список посещенных, чтобы не посещать его снова
         visited.add(u)
 
         # Iterate over all neighbors of the node
@@ -116,11 +111,11 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
                     predecessors[v] = u
                     # Add the neighbor to the queue with the new arrival time
                     heappush(queue, (new_arrival_time, v))
-
-    # Восстановление пути
+    
+    # reconstruct the path
     path = []
     current_node = target
-    # Перебор всех предшественников целевого узла
+    # Iterate over all predecessors of the target node
     while current_node is not None:
         path.append(current_node)
         current_node = predecessors[current_node]

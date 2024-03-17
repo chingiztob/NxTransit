@@ -1,7 +1,6 @@
 """Load combined GTFS and OSM data into a graph."""
 import multiprocessing as mp
 import os
-import time
 
 import geopandas as gpd
 import networkx as nx
@@ -71,9 +70,7 @@ def _add_edges_to_graph(graph: nx.DiGraph,
 
         # Getting route_id from trips_df
         # (searching by trip_id in trips_df and selecting route_id column)
-        route_id = trips_df.loc[trips_df['trip_id']
-                                == trip_id, 'route_id'
-                                ].values[0]
+        route_id = trips_df.loc[trips_df['trip_id'] == trip_id, 'route_id'].values[0]
 
         if 'wheelchair_accessible' in trips_df.columns:
             wheelchair_accessible = trips_df.loc[
@@ -191,9 +188,9 @@ def _load_GTFS(
 
         # Group geometry by shape_id, resulting in a Pandas Series
         # with trip_id (shape_id ?) as keys and LineString geometries as values
-        shapes = shapes_df.groupby('shape_id', group_keys=False).apply(
-            lambda group: LineString(group[['shape_pt_lon', 'shape_pt_lat']].values)
-            )
+        shapes = shapes_df.groupby('shape_id')[['shape_pt_lon', 'shape_pt_lat']].apply(
+        lambda group: LineString(group.values)
+        )
         # Mapping trip_id to shape_id for faster lookup
         trip_to_shape_map = trips_df.set_index('trip_id')['shape_id'].to_dict()
 
@@ -239,8 +236,6 @@ def _load_GTFS(
                    y=stop['stop_lat']
                    )
 
-    # Track time for benchmarking
-    timestamp = time.perf_counter()
     if multiprocessing:
 
         print('Building graph in parallel')
@@ -279,11 +274,9 @@ def _load_GTFS(
                     # Add new edge with data
                     merged_graph.add_edge(u, v, **data)
 
-        logger.info(f'Building graph in parallel complete in {time.perf_counter() - timestamp} seconds')
-        
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(merged_graph)
-        logger.info('New Transit graph created')
+        logger.info('Transit graph created')
 
         return merged_graph, stops_df
 
