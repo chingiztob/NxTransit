@@ -3,32 +3,46 @@ from heapq import heappop, heappush
 import bisect
 
 
+def _calculate_delay_sorted_nr(graph, from_node, to_node, current_time, wheelchair=False):
+    """
+    Calculates the delay and route for a given graph, from_node, to_node, and current_time.
+    Used in the time-dependent Dijkstra algorithm.
+    """
+    edge = graph[from_node][to_node]
+    if 'sorted_schedules' in edge:
+        schedules = edge['sorted_schedules']
+        departure_times = edge['departure_times']
+        idx = bisect.bisect_left(departure_times, current_time)
+        
+        if idx < len(schedules):
+            next_departure, next_arrival, _, wheelchair_acc = schedules[idx]
+            if not wheelchair or wheelchair_acc == 1:
+                return next_departure - current_time + (next_arrival - next_departure)
+        
+        return float('inf')
+    else:
+        return edge.get('weight', float('inf'))
+
+
 def _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair=False):
     """
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
     Used in the time-dependent Dijkstra algorithm.
     """
-
-    if 'sorted_schedules' in graph[from_node][to_node]:
-        schedules = graph[from_node][to_node]['sorted_schedules']
-        departure_times = graph[from_node][to_node]['departure_times']
-        # Binary search for the next departure time in the sorted list of schedules
+    edge = graph[from_node][to_node]
+    if 'sorted_schedules' in edge:
+        schedules = edge['sorted_schedules']
+        departure_times = edge['departure_times']
         idx = bisect.bisect_left(departure_times, current_time)
-        # If the next departure time exists, calculate the delay and route
+        
         if idx < len(schedules):
-            
             next_departure, next_arrival, route, wheelchair_acc = schedules[idx]
-            
-            if wheelchair and wheelchair_acc != 1:
-                return float('inf'), None
-            else:
+            if not wheelchair or wheelchair_acc == 1:
                 return next_departure - current_time + (next_arrival - next_departure), route
-        # If the next departure time does not exist, return 'inf' as the delay
-        else:
-            return float('inf'), None
-        # If the edge does not have sorted schedules, edge is not time-dependent and has a static weight
+        
+        return float('inf'), None
     else:
-        return graph[from_node][to_node]['weight'], None
+        return edge.get('weight', float('inf')), None
 
 
 def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes=False, wheelchair=False):
@@ -180,7 +194,7 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
         current_time, current_node = heappop(queue)
 
         for neighbor in graph.neighbors(current_node):
-            delay, _ = _calculate_delay_sorted(
+            delay = _calculate_delay_sorted_nr(
                 graph, current_node, neighbor, current_time
                 )
             new_arrival_time = current_time + delay
@@ -197,6 +211,51 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     return arrival_times, predecessors, travel_times
 
 
+def single_source_time_dependent_dijkstra_sorted_ntt(graph, source, start_time):
+    """
+    Finds the shortest path from a source node to all other nodes in a time-dependent graph using Dijkstra's algorithm.
+
+    Parameters
+    ----------
+    graph : networkx.DiGraph
+        The graph to search.
+    source : hashable
+        The node to start the search from.
+    start_time : float
+        The time to start the search from.
+
+    Returns
+    -------
+    tuple
+        A tuple containing three dictionaries:
+            - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
+            - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
+    """
+    if source not in graph:
+        raise ValueError(f"The source node {source} does not exist in the graph.")
+
+    arrival_times = {node: float('inf') for node in graph.nodes}
+    predecessors = {node: None for node in graph.nodes}
+    arrival_times[source] = start_time
+    queue = [(start_time, source)]
+
+    while queue:
+        current_time, current_node = heappop(queue)
+
+        for neighbor in graph.neighbors(current_node):
+            delay = _calculate_delay_sorted_nr(
+                graph, current_node, neighbor, current_time
+                )
+            new_arrival_time = current_time + delay
+
+            if new_arrival_time < arrival_times[neighbor]:
+                arrival_times[neighbor] = new_arrival_time
+                predecessors[neighbor] = current_node
+                heappush(queue, (new_arrival_time, neighbor))
+
+    return arrival_times, predecessors
+
+
 def _calculate_delay_hashed(from_node, to_node, current_time, hashtable, wheelchair=False):
     """
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
@@ -209,7 +268,7 @@ def _calculate_delay_hashed(from_node, to_node, current_time, hashtable, wheelch
     # Handle static weights differently
     # Check if it's a static weight
     if isinstance(schedule_info[0], tuple) and len(schedule_info[0]) == 1:
-        return schedule_info[0][0], None  # Return the static weight
+        return schedule_info[0][0] # Return the static weight
 
     else:
         departure_times = [d[0] for d in schedule_info]
@@ -217,15 +276,15 @@ def _calculate_delay_hashed(from_node, to_node, current_time, hashtable, wheelch
 
         if idx < len(schedule_info):
 
-            next_departure, next_arrival, route, wheelchair_acc = schedule_info[idx]
+            next_departure, next_arrival, _, wheelchair_acc = schedule_info[idx]
 
             if wheelchair and wheelchair_acc != '1':
-                return float('inf'), None
+                return float('inf')
             else:
-                return next_departure - current_time + (next_arrival - next_departure), route
+                return next_departure - current_time + (next_arrival - next_departure)
         else:
 
-            return float('inf'), None
+            return float('inf')
 
 
 def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hashtable):
@@ -274,7 +333,7 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
 
         for neighbor in graph.neighbors(current_node):
 
-            delay, _ = _calculate_delay_hashed(current_node, neighbor, current_time, hashtable)
+            delay = _calculate_delay_hashed(current_node, neighbor, current_time, hashtable)
             new_arrival_time = current_time + delay
 
             if new_arrival_time < arrival_times[neighbor]:
@@ -321,14 +380,12 @@ def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashta
     """
 
     if algorithm == 'sorted':
-        arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_sorted(
+        return(single_source_time_dependent_dijkstra_sorted(
             graph, source, start_time
-            )
+            ))
     elif algorithm == 'hashed':
-        arrival_times, predecessors, travel_times = single_source_time_dependent_dijkstra_hashed(
+        return(single_source_time_dependent_dijkstra_hashed(
             graph, source, start_time, hashtable
-            )
+            ))
     else:
         raise (ValueError, "Invalid algorithm. Use 'sorted' or 'hashed'")
-
-    return arrival_times, predecessors, travel_times
