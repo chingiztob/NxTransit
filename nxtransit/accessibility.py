@@ -197,11 +197,9 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
 
     # Filter nodes that are reachable within the cutoff
     points_data = [{'node': node,
-                    'geometry': Point(
-                        graph.nodes[node]['x'],
-                        graph.nodes[node]['y']
-                        ),
-                    'travel_time': travel_time}
+                    'geometry': Point(graph.nodes[node]['x'],graph.nodes[node]['y']),
+                    'travel_time': travel_time
+                    }
                    for node, travel_time in travel_times.items()
                    if travel_time <= cutoff
                    and 'x' in graph.nodes[node]
@@ -218,21 +216,16 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
                      and data['type'] == 'street'
                      ]
     
-    points_gdf = gpd.GeoDataFrame(points_data, geometry='geometry', 
-                                  crs="EPSG:4326")
+    points_gdf = gpd.GeoDataFrame(points_data, geometry='geometry', crs="EPSG:4326")
+    edges_gdf = gpd.GeoDataFrame(reached_edges, geometry='geometry', crs="EPSG:4326")
     
-    edges_gdf = gpd.GeoDataFrame(reached_edges, geometry='geometry', 
-                                 crs="EPSG:4326")
     # Combine the GeoDataFrames
-    merged_gdf = pd.concat([points_gdf, edges_gdf], ignore_index=True)
-    
-    # Nodes and edges buffered and merged into a single polygon
     # Re-projection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
-    buffer_gdf = merged_gdf.to_crs("EPSG:4087")
-    buffer_gdf['geometry'] = buffer_gdf.buffer(buffer_radius)
-
+    merged_gdf = pd.concat([points_gdf, edges_gdf], ignore_index=True).to_crs("EPSG:4087")
+    # Nodes and edges buffered and merged into a single polygon
+    buffer_gdf = merged_gdf.buffer(buffer_radius)
+    
     service_area_polygon = buffer_gdf.unary_union
-
     # overlap_count is needed for percent_access calculation
     service_area_gdf = gpd.GeoDataFrame({'geometry': [service_area_polygon], 'id': source, 'overlap_count': 1}, 
                                         crs="EPSG:4087")
