@@ -158,7 +158,7 @@ def _load_GTFS(
     -------
     tuple
         A tuple containing:
-            - nx.MultiDiGraph: Graph representing GTFS data.
+            - nx.DiGraph: Graph representing GTFS data.
             - pd.DataFrame: DataFrame containing stop information.
     """
     # Initialize the graph and read data files.
@@ -185,9 +185,9 @@ def _load_GTFS(
             raise FileNotFoundError('shapes.txt not found')
 
         shapes_df = pd.read_csv(os.path.join(GTFSpath, "shapes.txt"))
-
         # Group geometry by shape_id, resulting in a Pandas Series
         # with trip_id (shape_id ?) as keys and LineString geometries as values
+        # This is definitely not working as intended
         shapes = shapes_df.groupby('shape_id')[['shape_pt_lon', 'shape_pt_lat']].apply(
         lambda group: LineString(group.values)
         )
@@ -218,7 +218,6 @@ def _load_GTFS(
 
     # Convert departure_time from HH:MM:SS o seconds
     departure_time_seconds = parse_time_to_seconds(departure_time_input)
-
     # Filtering stop_times by time window
     filtered_stops = _filter_stop_times_by_time(stop_times_df,
                                                 departure_time_seconds,
@@ -334,21 +333,19 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
     G_city = ox.graph_from_polygon(boundary,
                                    network_type='walk',
                                    simplify=True)
-    logger.info('Street network graph created')
 
     for u, v, key, data in G_city.edges(keys=True, data=True):
+        # Clean extra attributes
         attributes_to_keep = {'length', 'highway', 'name'}
         for attribute in list(data):
             if attribute not in attributes_to_keep:
                 del data[attribute]
-
-    # Adding walking times on streets
-    for u, v, key, data in G_city.edges(data=True, keys=True):
-        distance = data['length']
-
-        data['weight'] = distance / 1.39
+        
+        # Calculate walking time in seconds
+        data['weight'] = data['length'] / 1.39
         data['type'] = 'street'
         
+        # Add geometry to the edge
         u_geom = Point(G_city.nodes[u]['x'], G_city.nodes[u]['y'])
         v_geom = Point(G_city.nodes[v]['x'], G_city.nodes[v]['y'])
         data['geometry'] = LineString([u_geom, v_geom])
@@ -361,6 +358,7 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
 
     # Convert MultiDiGraph from OSMNX to DiGraph
     G_city = nx.DiGraph(G_city)
+    logger.info('Street network graph created')
 
     return G_city
 
@@ -407,8 +405,6 @@ def feed_to_graph(
     -------
     G_combined : nx.DiGraph
         Combined directed graph.
-    stops : pd.DataFrame
-        DataFrame with information about the stops.
     """
     G_transit, stops = _load_GTFS(GTFSpath, departure_time_input,
                                   day_of_week, duration_seconds,
@@ -427,7 +423,6 @@ def feed_to_graph(
 
     # Combining OSM and GTFS data
     G_combined = nx.compose(G_transit, G_city)
-
     # Filling projected coordinates for graph nodes
     _fill_coordinates(G_combined)
 
@@ -435,8 +430,31 @@ def feed_to_graph(
     G_combined = connect_stops_to_streets(G_combined, stops)
 
     logger.info(
-        f'Number of nodes: {G_combined.number_of_nodes()}\n'
-        f'Number of edges: {G_combined.number_of_edges()}\n'
+        f'Nodes: {G_combined.number_of_nodes()}, Edges: {G_combined.number_of_edges()}'
     )
 
-    return G_combined, stops
+    return G_combined
+
+def load_stops_gdf(path):
+    """
+    Load stops data from a specified path and return a GeoDataFrame.
+
+    Parameters
+    ----------
+    path: str
+        The path to the directory containing the stops data.
+
+    Returns
+    -------
+    stops_gdf: gpd.GeoDataFrame
+        GeoDataFrame containing the stops data with geometry information.
+
+    """
+    stops_df = pd.read_csv(os.path.join(path, "stops.txt"))
+    stops_gdf = gpd.GeoDataFrame(stops_df, 
+                                 geometry=gpd.points_from_xy(
+                                     stops_df.stop_lon, 
+                                     stops_df.stop_lat),
+                                 crs = 'epsg:4326'
+                                 )
+    return stops_gdf

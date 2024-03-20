@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "NxTransit"
-version = "0.1.18.2"
+version = "0.1.19"
 description = "Construct and analyze time-dependent transit networks from GTFS data"
 authors = [{ name = "Chingiz Zhanarbaev" }]
 readme = "README.md" 

@@ -13,7 +13,7 @@ day = 'monday'  # day of the week in lower case
 
 @pytest.fixture(scope="module")
 def graph():
-    G, _ = tr.feed_to_graph(
+    G = tr.feed_to_graph(
         GTFSpath,
         departure_time_input,
         day,
@@ -31,14 +31,13 @@ def graph():
     (False, True, True),
 ])
 def test_loading_feed(read_shapes, multiprocessing, load_graphml):
-    G, stops = tr.feed_to_graph(GTFSpath, departure_time_input, day,
+    G = tr.feed_to_graph(GTFSpath, departure_time_input, day,
                                 duration_seconds=3600*3,
                                 read_shapes=read_shapes,
                                 multiprocessing=multiprocessing,
                                 load_graphml=load_graphml,
                                 input_graph_path=graphml_path)
     assert G is not None
-    assert stops is not None
 
 
 def test_validation():

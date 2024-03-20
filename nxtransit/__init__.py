@@ -11,6 +11,7 @@ Key Features:
 from ._version import __version__ 
 
 from .loaders import feed_to_graph
+from .loaders import load_stops_gdf
 
 from .routers import time_dependent_dijkstra
 from .routers import single_source_time_dependent_dijkstra

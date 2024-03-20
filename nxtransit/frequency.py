@@ -4,6 +4,7 @@ from statistics import mean
 
 import numpy as np
 import scipy.signal
+import tqdm
 
 from .routers import single_source_time_dependent_dijkstra, time_dependent_dijkstra
 
@@ -63,7 +64,7 @@ def node_frequency(graph, start_time, end_time):
     None
     """
 
-    for node_view in graph.nodes(data=True):
+    for node_view in tqdm.tqdm(graph.nodes(data=True)):
         node = node_view[0]
         all_times = []
 

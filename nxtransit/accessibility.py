@@ -1,10 +1,12 @@
 """Tools for calculating accessibility metrics"""
 import multiprocessing
 import time
+import warnings
 from functools import partial
 
 import geopandas as gpd
 import pandas as pd
+import tqdm
 import xarray as xr
 from geocube.api.core import make_geocube
 from geocube.vector import vectorize
@@ -46,7 +48,7 @@ def calculate_od_matrix(graph, nodes: list, departure_time: int,
 
     results = []
 
-    for source_node in nodes:
+    for source_node in tqdm.tqdm(nodes):
         # Calculate arrival times and travel times 
         # for each node using the specified algorithm
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
@@ -127,9 +129,10 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
     if expected_ram is None or free_ram is None:
         print('Could not estimate memory usage. Proceeding with the calculation.')
     elif expected_ram > free_ram:
-        raise MemoryError(f'Graph size {bytes_to_readable(graph_size)}, '
-                          f'expected costs {bytes_to_readable(expected_ram)} exceed available '
-                          f'memory {bytes_to_readable(free_ram)}')
+        warnings.warn(f'Graph size {bytes_to_readable(graph_size)}, '
+                      f'expected costs {bytes_to_readable(expected_ram)} exceed available '
+                      f'memory {bytes_to_readable(free_ram)}')
+
     else:
         print(f'Graph size {bytes_to_readable(graph_size)}, expected costs '
               f'{bytes_to_readable(expected_ram)}, memory available '

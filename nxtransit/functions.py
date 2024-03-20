@@ -8,7 +8,7 @@ from shapely.geometry import Polygon
 
 def create_grid(gdf, cell_size):
     """
-    Creates a grid within the bounding box of a GeoDataFrame.
+    Creates a rectangular grid within the bounding box of a GeoDataFrame.
 
     Parameters
     ----------
@@ -58,13 +58,12 @@ def create_centroids_dataframe(polygon_gdf):
     gpd.GeoDataFrame
         GeoDataFrame with Point geometries of the centroids.
     """
-    # Calculate centroids
-    centroids = polygon_gdf.geometry.centroid
 
     # Create a GeoDataFrame with these centroids
     # and include the 'origin_id' from the parent polygon
     centroids_gdf = gpd.GeoDataFrame(polygon_gdf[['id']].copy(),
-                                     geometry=centroids, crs=polygon_gdf.crs
+                                     geometry=polygon_gdf.geometry.centroid, 
+                                     crs=polygon_gdf.crs
                                      )
     centroids_gdf.rename(columns={'id': 'origin_id'}, inplace=True)
 
