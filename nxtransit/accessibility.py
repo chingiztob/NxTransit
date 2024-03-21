@@ -97,7 +97,7 @@ def _calculate_od_worker(source_node, nodes_list, graph, departure_time, hashtab
     } for dest_node in nodes_list if dest_node in arrival_times]
 
 
-def calculate_od_matrix_parallel(graph, nodes, departure_time, num_processes=2, hashtable=None):
+def calculate_od_matrix_parallel(graph, nodes, departure_time, target_nodes=None, num_processes=2, hashtable=None):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, 
     nodes, and departure time using parallel processing.
@@ -110,6 +110,8 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
         A list of node IDs in the graph.
     departure_time : int
         The departure time in seconds since midnight.
+    target_nodes: list, optional
+        A list of target node IDs in the graph. If not specified, source nodes are used.
     num_processes : int
         Number of parallel processes to use for computation.
     hashtable : dict, optional
@@ -127,32 +129,35 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, num_processes=2, 
     expected_ram = graph_size * 5 + num_processes * graph_size * 2.5
     
     if expected_ram is None or free_ram is None:
-        print('Could not estimate memory usage. Proceeding with the calculation.')
+        warnings.warn('Could not estimate memory usage. Proceeding with the calculation.')
     elif expected_ram > free_ram:
         warnings.warn(f'Graph size {bytes_to_readable(graph_size)}, '
                       f'expected costs {bytes_to_readable(expected_ram)} exceed available '
                       f'memory {bytes_to_readable(free_ram)}')
-
     else:
         print(f'Graph size {bytes_to_readable(graph_size)}, expected costs '
               f'{bytes_to_readable(expected_ram)}, memory available '
               f'{bytes_to_readable(free_ram)}')
 
     time_start = time.perf_counter()
-
+    
+    if not target_nodes:
+        target_nodes = nodes
+    
     with multiprocessing.Pool(processes=num_processes) as pool:
-        # Fixing the arguments of the calculate_OD_worker function for nodes list
-        partial_worker = partial(_calculate_od_worker,
-                                 nodes_list=nodes, 
-                                 graph=graph, 
-                                 departure_time=departure_time,
-                                 hashtable=hashtable)
+        # Fix the arguments of the calculate_OD_worker function for nodes list
+        partial_worker = partial(
+            _calculate_od_worker,
+            nodes_list=target_nodes, 
+            graph=graph, 
+            departure_time=departure_time,
+            hashtable=hashtable
+            )
    
         results = pool.map(partial_worker, nodes)
 
     # Flatten the list of lists
     results = [item for sublist in results for item in sublist]
-
     results_df = pd.DataFrame(results)
 
     print(f"Time elapsed: {time.perf_counter() - time_start}")

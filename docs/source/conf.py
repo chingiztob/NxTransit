@@ -44,3 +44,6 @@ html_theme_options = {
     "repository_url": "https://github.com/chingiztob/NxTransit",
     "use_repository_button": True,
 }
+html_meta = {
+    "google-site-verification": "JPVWxkXKsSBRvQqXp1MfUV7TaLwUa6PlJPXV4KDEujU"
+    }
