@@ -1,7 +1,6 @@
 """Tools for calculating accessibility metrics"""
 import multiprocessing
 import time
-import warnings
 from functools import partial
 
 import geopandas as gpd
@@ -10,10 +9,8 @@ import tqdm
 import xarray as xr
 from geocube.api.core import make_geocube
 from geocube.vector import vectorize
-from pympler import asizeof
 from shapely.geometry import Point
 
-from .other import bytes_to_readable, estimate_ram
 from .routers import single_source_time_dependent_dijkstra
 
 
@@ -123,21 +120,6 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, target_nodes=None
         A DataFrame containing the OD matrix.
     """
     print(f'Calculating the OD using {num_processes} processes')
-
-    graph_size = asizeof.asizeof(graph)
-    ram, free_ram = estimate_ram()
-    expected_ram = graph_size * 5 + num_processes * graph_size * 2.5
-    
-    if expected_ram is None or free_ram is None:
-        warnings.warn('Could not estimate memory usage. Proceeding with the calculation.')
-    elif expected_ram > free_ram:
-        warnings.warn(f'Graph size {bytes_to_readable(graph_size)}, '
-                      f'expected costs {bytes_to_readable(expected_ram)} exceed available '
-                      f'memory {bytes_to_readable(free_ram)}')
-    else:
-        print(f'Graph size {bytes_to_readable(graph_size)}, expected costs '
-              f'{bytes_to_readable(expected_ram)}, memory available '
-              f'{bytes_to_readable(free_ram)}')
 
     time_start = time.perf_counter()
     

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "NxTransit"
-version = "0.1.19"
+dynamic = ["version"]
 description = "Construct and analyze time-dependent transit networks from GTFS data"
 authors = [{ name = "Chingiz Zhanarbaev" }]
 readme = "README.md" 
@@ -27,7 +27,6 @@ dependencies = [
     "numpy>=1.26.4",
     "osmnx>=1.9.1",
     "pandas>=2.2.0",
-    "Pympler>=1.0.1",
     "pytest>=8.0.1",
     "scipy>=1.12.0",
     "Shapely>=2.0.3",
@@ -44,6 +43,9 @@ tests = [
 
 [tool.setuptools]
 packages = ["nxtransit"]
+
+[tool.setuptools.dynamic.version]
+attr = 'nxtransit.__version__'
 
 # python -m build
 # twine upload dist/*
