@@ -6,6 +6,7 @@
 .. meta::
     :description: NxTransit integrates GTFS data with OSM to create a time-dependent, multimodal urban transit graph for advanced transportation analysis.
     :keywords: GTFS, transit, transportation, multimodal, graph, analysis, urban, public transportation, OSM, OpenStreetMap
+    :google-site-verification: JPVWxkXKsSBRvQqXp1MfUV7TaLwUa6PlJPXV4KDEujU
 
 NxTransit |version|
 ===================
