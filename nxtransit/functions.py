@@ -11,11 +11,15 @@ def determine_utm_zone(gdf):
     """
     Determines the UTM zone for a GeoDataFrame based on its centroid.
     
-    Parameters:
-    - gdf: GeoDataFrame - The input geospatial data.
+    Parameters
+    ----------
+    gdf : GeoDataFrame
+        The input geospatial data.
     
-    Returns:
-    - UTM EPSG code as string.
+    Returns
+    -------
+    epsg_code: str
+        UTM EPSG code as string.
     """
     # Calculate the centroid of the bounding box
     centroid_longitude = gdf.total_bounds[:2].mean()
@@ -28,18 +32,29 @@ def determine_utm_zone(gdf):
     
     return epsg_code
 
-def create_grid(gdf, cell_size):
+
+def create_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
     """
-    Adjusted to ensure it covers the entire bounding box, including partial cells.
+    Creates a grid of square cells covering the extent of the input GeoDataFrame.
+    
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        The input GeoDataFrame representing the spatial extent.
+    cell_size : float
+        The size of each square cell in the grid.
+    
+    Returns
+    -------
+    gpd.GeoDataFrame
+        The resulting grid GeoDataFrame.
     """
     utm_crs = determine_utm_zone(gdf)
     gdf_utm = gdf.to_crs(utm_crs)
     minx, miny, maxx, maxy = gdf_utm.total_bounds
     
-    # Here's the adjustment: use ceil to ensure coverage of partial cells
     nx = math.ceil((maxx - minx) / cell_size)
     ny = math.ceil((maxy - miny) / cell_size)
-    
     grid_cells = []
     for i in range(nx):
         for j in range(ny):
@@ -47,9 +62,11 @@ def create_grid(gdf, cell_size):
             y1 = miny + j * cell_size
             x2 = x1 + cell_size
             y2 = y1 + cell_size
-            grid_cells.append(Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)]))
+            cell = Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
+            grid_cells.append(cell)
     
-    grid = gpd.GeoDataFrame(grid_cells, columns=['geometry'], crs=utm_crs)
+    grid = gpd.GeoDataFrame(geometry=grid_cells, crs=utm_crs)
+    
     return grid
 
 
