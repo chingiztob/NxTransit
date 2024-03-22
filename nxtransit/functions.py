@@ -21,12 +21,16 @@ def determine_utm_zone(gdf):
     epsg_code: str
         UTM EPSG code as string.
     """
-    # Calculate the centroid of the bounding box
-    centroid_longitude = gdf.total_bounds[:2].mean()
+    # Ensure the GeoDataFrame is in geographic coordinates (EPSG:4326)
+    gdf_proj = gdf.to_crs('EPSG:4326')
+    
+    minx, miny, maxx, maxy = gdf_proj.total_bounds
+    centroid_longitude = (minx + maxx) / 2
+    
     # Determine UTM zone number
     utm_zone = math.floor((centroid_longitude + 180) / 6) + 1
     # Determine hemisphere (north or south)
-    hemisphere = 'north' if gdf.total_bounds[1] + gdf.total_bounds[3] > 0 else 'south'
+    hemisphere = 'north' if (miny + maxy) / 2 >= 0 else 'south'
     # Construct EPSG code for UTM
     epsg_code = f"EPSG:326{utm_zone}" if hemisphere == 'north' else f"EPSG:327{utm_zone}"
     

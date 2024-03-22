@@ -29,6 +29,7 @@ from .frequency import connectivity_frequency
 from .frequency import single_source_connectivity_frequency
 
 from .functions import create_grid
+from .functions import determine_utm_zone
 from .functions import create_centroids_dataframe
 from .functions import validate_feed
 from .functions import separate_travel_times
