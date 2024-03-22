@@ -241,16 +241,13 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
             resolution=resolution,
             measurements=['overlap_count'],
         )
-
         rasters.append(cube)
     
     # Combine the rasters into 3-dimensional xarray DataSet
     # Then sum the values along the 'summary' dimension
     summarized_raster = xr.concat(rasters, dim='summary').sum(dim='summary')
-
     # Vectorize the summarized raster back into a GeoDataFrame
-    vectorized_result = vectorize(
-        summarized_raster.overlap_count.astype("float32"))
+    vectorized_result = vectorize(summarized_raster.overlap_count.astype("float32"))
     
     # Filter the vectorized result to include only polygons that cover at least the threshold of the service areas
     polygons_needed = int(len(service_areas) * threshold)

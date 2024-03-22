@@ -4,7 +4,7 @@ import platform
 import warnings
 import logging
 
-
+# Currently not used
 # https://systemweakness.com/how-to-use-the-win32api-with-python3-3adde999211b
 def estimate_ram():
     """

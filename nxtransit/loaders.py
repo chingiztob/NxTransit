@@ -369,7 +369,7 @@ def feed_to_graph(
     day_of_week: str,
     duration_seconds: int,
     read_shapes: bool = False,
-    multiprocessing: bool = False,
+    multiprocessing: bool = True,
     input_graph_path: str = None,
     output_graph_path: str = None,
     save_graphml: bool = False,

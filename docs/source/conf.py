@@ -1,5 +1,7 @@
 import os
 import sys
+from datetime import date
+
 sys.path.insert(0, os.path.abspath('../../'))
 from nxtransit import __version__
 
@@ -12,7 +14,7 @@ from nxtransit import __version__
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'NxTransit'
-copyright = '2024, Chingiz Zhanarbaev'
+copyright = f"2023-{date.today().year}, Chingiz Zhanarbaev"
 author = 'Chingiz Zhanarbaev'
 
 # Use the version information directly from the imported module

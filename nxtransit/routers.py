@@ -232,8 +232,8 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
                 heappush(queue, (new_arrival_time, neighbor))
 
                 travel_times[neighbor] = new_arrival_time - start_time
-    # Реконструкция пути не производится
-    # Однако на основе 'predecessors' можно восстановить путь к любому узлу
+    # Path reconstruction is not performed
+    # However, based on 'predecessors', you can reconstruct the path to any node
 
     return arrival_times, predecessors, travel_times
 

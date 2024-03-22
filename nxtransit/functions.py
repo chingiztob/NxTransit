@@ -1,3 +1,4 @@
+import math
 import os
 
 import geopandas as gpd
@@ -6,42 +7,50 @@ import tqdm
 from shapely.geometry import Polygon
 
 
+def determine_utm_zone(gdf):
+    """
+    Determines the UTM zone for a GeoDataFrame based on its centroid.
+    
+    Parameters:
+    - gdf: GeoDataFrame - The input geospatial data.
+    
+    Returns:
+    - UTM EPSG code as string.
+    """
+    # Calculate the centroid of the bounding box
+    centroid_longitude = gdf.total_bounds[:2].mean()
+    # Determine UTM zone number
+    utm_zone = math.floor((centroid_longitude + 180) / 6) + 1
+    # Determine hemisphere (north or south)
+    hemisphere = 'north' if gdf.total_bounds[1] + gdf.total_bounds[3] > 0 else 'south'
+    # Construct EPSG code for UTM
+    epsg_code = f"EPSG:326{utm_zone}" if hemisphere == 'north' else f"EPSG:327{utm_zone}"
+    
+    return epsg_code
+
 def create_grid(gdf, cell_size):
     """
-    Creates a rectangular grid within the bounding box of a GeoDataFrame.
-
-    Parameters
-    ----------
-    gdf : gpd.GeoDataFrame
-        GeoDataFrame containing the geometry to be gridded.
-    cell_size : float
-        Size of the grid cells in the meters.
-
-    Returns
-    -------
-    gpd.GeoDataFrame
-        Polygon grid.
+    Adjusted to ensure it covers the entire bounding box, including partial cells.
     """
-
-    gdf = gdf.to_crs("EPSG:4087")  # Project to metric CRS for accurate cell size
-    xmin, ymin, xmax, ymax = gdf.total_bounds
-    rows = int((ymax - ymin) / cell_size)
-    cols = int((xmax - xmin) / cell_size)
-    grid = []
-    ids = []  # List to hold the unique IDs
-
-    for i in range(cols):
-        for j in range(rows):
-            x1 = xmin + i * cell_size
-            y1 = ymin + j * cell_size
+    utm_crs = determine_utm_zone(gdf)
+    gdf_utm = gdf.to_crs(utm_crs)
+    minx, miny, maxx, maxy = gdf_utm.total_bounds
+    
+    # Here's the adjustment: use ceil to ensure coverage of partial cells
+    nx = math.ceil((maxx - minx) / cell_size)
+    ny = math.ceil((maxy - miny) / cell_size)
+    
+    grid_cells = []
+    for i in range(nx):
+        for j in range(ny):
+            x1 = minx + i * cell_size
+            y1 = miny + j * cell_size
             x2 = x1 + cell_size
             y2 = y1 + cell_size
-            grid.append(Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)]))
-            ids.append(f"grid_{i*rows + j + 1}")  # Generate unique ID
-
-    grid_geodataframe = gpd.GeoDataFrame({'id': ids, 'geometry': grid}, crs="EPSG:4087")
+            grid_cells.append(Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)]))
     
-    return grid_geodataframe
+    grid = gpd.GeoDataFrame(grid_cells, columns=['geometry'], crs=utm_crs)
+    return grid
 
 
 def create_centroids_dataframe(polygon_gdf):
