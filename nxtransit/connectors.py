@@ -38,13 +38,13 @@ def connect_stops_to_streets(graph, stops: pd.DataFrame):
     using projected coordinates in EPSG:4087.
     """
     # Create a list of street node tuples (x, y, node_id)
-    node_data = [(data['metric_X'], data['metric_Y'], n)
-                 for n, data in graph.nodes(data=True)
+    node_data = [(data['metric_X'], data['metric_Y'], idx)
+                 for idx, data in graph.nodes(data=True)
                  if 'metric_X' in data and 'metric_Y' in data
                  and data['type'] == 'street']
 
-    node_data_wgs = [(data['x'], data['y'], n)
-                     for n, data in graph.nodes(data=True)
+    node_data_wgs = [(data['x'], data['y'], idx)
+                     for idx, data in graph.nodes(data=True)
                      if 'y' in data and 'x' in data
                      and data['type'] == 'street']
 
@@ -125,6 +125,9 @@ def snap_points_to_network(graph, points):
     crs_4326 = CRS.from_epsg(4326)
     crs_4087 = CRS.from_epsg(4087)
     transformer = Transformer.from_crs(crs_4326, crs_4087)
+    
+    if 'origin_id' not in points.columns:
+        points['origin_id'] = points.index
 
     for index, row in points.iterrows():
 

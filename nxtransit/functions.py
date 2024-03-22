@@ -58,12 +58,15 @@ def create_centroids_dataframe(polygon_gdf):
     gpd.GeoDataFrame
         GeoDataFrame with Point geometries of the centroids.
     """
-
+    # Create id column if it doesn't exist
+    # ID is required for the explicit origin_id column in the final output
+    if 'id' not in polygon_gdf.columns:
+        polygon_gdf['id'] = polygon_gdf.index
     # Create a GeoDataFrame with these centroids
     # and include the 'origin_id' from the parent polygon
     centroids_gdf = gpd.GeoDataFrame(polygon_gdf[['id']].copy(),
-                                     geometry=polygon_gdf.geometry.centroid, 
-                                     crs=polygon_gdf.crs
+                                     geometry=polygon_gdf.to_crs('EPSG:4087').geometry.centroid, 
+                                     crs='EPSG:4087'
                                      )
     centroids_gdf.rename(columns={'id': 'origin_id'}, inplace=True)
 
@@ -263,17 +266,13 @@ def separate_travel_times(graph, predecessors: dict, travel_times: dict, source)
     """
     
     results = []
-    
     for node in tqdm.tqdm(graph.nodes(data=True)):
-        
         if node[0] != source:
-
             path = _reconstruct_path(node[0], predecessors)
             pedestrian_path = _unpack_path_vertices(path)
             pedestrian_time = _calculate_pedestrian_time(pedestrian_path, graph)
             
             transit_time = travel_times[node[0]] - pedestrian_time
-
             results.append({'node': node[0], 'transit_time': transit_time, 'pedestrian_time': pedestrian_time})
         
     results = pd.DataFrame(results)

@@ -120,7 +120,6 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, target_nodes=None
         A DataFrame containing the OD matrix.
     """
     print(f'Calculating the OD using {num_processes} processes')
-
     time_start = time.perf_counter()
     
     if not target_nodes:
@@ -135,16 +134,11 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, target_nodes=None
             departure_time=departure_time,
             hashtable=hashtable
             )
-   
         results = pool.map(partial_worker, nodes)
 
-    # Flatten the list of lists
-    results = [item for sublist in results for item in sublist]
-    results_df = pd.DataFrame(results)
-
     print(f"Time elapsed: {time.perf_counter() - time_start}")
-
-    return results_df
+    # Return flattened list of lists
+    return pd.DataFrame([item for sublist in results for item in sublist])
 
 
 def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = 'sorted', hashtable=None):
@@ -214,8 +208,9 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     
     service_area_polygon = buffer_gdf.unary_union
     # overlap_count is needed for percent_access calculation
-    service_area_gdf = gpd.GeoDataFrame({'geometry': [service_area_polygon], 'id': source, 'overlap_count': 1}, 
-                                        crs="EPSG:4087")
+    service_area_gdf = gpd.GeoDataFrame({
+        'geometry': [service_area_polygon],
+        'id': source,'overlap_count': 1}, crs="EPSG:4087")
     return service_area_gdf
 
 
