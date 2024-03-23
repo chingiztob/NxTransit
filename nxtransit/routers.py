@@ -211,7 +211,7 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     if source not in graph:
         raise ValueError(f"The source node {source} does not exist in the graph.")
 
-    arrival_times = {node: float('inf') for node in graph.nodes}
+    arrival_times = {node: float("inf") for node in graph.nodes}
     predecessors = {node: None for node in graph.nodes}
     arrival_times[source] = start_time
     travel_times = {}
@@ -223,7 +223,7 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
         for neighbor in graph.neighbors(current_node):
             delay = _calculate_delay_sorted_nr(
                 graph, current_node, neighbor, current_time
-                )
+            )
             new_arrival_time = current_time + delay
 
             if new_arrival_time < arrival_times[neighbor]:
@@ -273,7 +273,7 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
     if source not in graph:
         raise ValueError(f"The source node {source} does not exist in the graph.")
 
-    arrival_times = {node: float('inf') for node in graph.nodes}
+    arrival_times = {node: float("inf") for node in graph.nodes}
     predecessors = {node: None for node in graph.nodes}
     arrival_times[source] = start_time
     travel_times = {}
@@ -283,8 +283,9 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
         current_time, current_node = heappop(queue)
 
         for neighbor in graph.neighbors(current_node):
-
-            delay = _calculate_delay_hashed(current_node, neighbor, current_time, hashtable)
+            delay = _calculate_delay_hashed(
+                current_node, neighbor, current_time, hashtable
+            )
             new_arrival_time = current_time + delay
 
             if new_arrival_time < arrival_times[neighbor]:
@@ -329,14 +330,11 @@ def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashta
     --------
     nxtransit.functions.process_graph_to_hash_table : Create a hash table for quick access to sorted schedules.
     """
-
-    if algorithm == 'sorted':
-        return(single_source_time_dependent_dijkstra_sorted(
-            graph, source, start_time
-            ))
-    elif algorithm == 'hashed':
-        return(single_source_time_dependent_dijkstra_hashed(
+    if algorithm == "sorted":
+        return single_source_time_dependent_dijkstra_sorted(graph, source, start_time)
+    elif algorithm == "hashed":
+        return single_source_time_dependent_dijkstra_hashed(
             graph, source, start_time, hashtable
-            ))
+        )
     else:
         raise (ValueError, "Invalid algorithm. Use 'sorted' or 'hashed'")

@@ -46,25 +46,27 @@ def calculate_od_matrix(graph, nodes: list, departure_time: int,
     results = []
 
     for source_node in tqdm.tqdm(nodes):
-        # Calculate arrival times and travel times 
+        # Calculate arrival times and travel times
         # for each node using the specified algorithm
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source_node, departure_time,
-            hashtable, algorithm=algorithm
-            )
+            graph, source_node, departure_time, hashtable, algorithm=algorithm
+        )
 
-        # Iterate through all nodes to select them 
+        # Iterate through all nodes to select them
         # in the results of Dijkstra's algorithm
         for dest_node in nodes:
             if dest_node in arrival_times:
                 # Add results to the list
                 results.append(
                     {
-                     'source_node': source_node,
-                     'destination_node': dest_node,
-                     'arrival_time': arrival_times[dest_node],
-                     'travel_time': travel_times.get(dest_node, None)  # .get() to avoid KeyError
-                     })
+                        "source_node": source_node,
+                        "destination_node": dest_node,
+                        "arrival_time": arrival_times[dest_node],
+                        "travel_time": travel_times.get(
+                            dest_node, None
+                        ),  # .get() to avoid KeyError
+                    }
+                )
 
     # Convert the list of results to a DataFrame and to a csv file
     results_df = pd.DataFrame(results)
@@ -119,21 +121,21 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, target_nodes=None
     results_df : pandas.DataFrame
         A DataFrame containing the OD matrix.
     """
-    print(f'Calculating the OD using {num_processes} processes')
+    print(f"Calculating the OD using {num_processes} processes")
     time_start = time.perf_counter()
-    
+
     if not target_nodes:
         target_nodes = nodes
-    
+
     with multiprocessing.Pool(processes=num_processes) as pool:
         # Fix the arguments of the calculate_OD_worker function for nodes list
         partial_worker = partial(
             _calculate_od_worker,
-            nodes_list=target_nodes, 
-            graph=graph, 
+            nodes_list=target_nodes,
+            graph=graph,
             departure_time=departure_time,
-            hashtable=hashtable
-            )
+            hashtable=hashtable,
+        )
         results = pool.map(partial_worker, nodes)
 
     print(f"Time elapsed: {time.perf_counter() - time_start}")
@@ -169,48 +171,48 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     """
 
     _, _, travel_times = single_source_time_dependent_dijkstra(
-        graph, 
-        source,
-        start_time,
-        hashtable,
-        algorithm
+        graph, source, start_time, hashtable, algorithm
     )
 
     # Filter nodes that are reachable within the cutoff
-    points_data = [{'node': node,
-                    'geometry': Point(graph.nodes[node]['x'],graph.nodes[node]['y']),
-                    'travel_time': travel_time
-                    }
-                   for node, travel_time in travel_times.items()
-                   if travel_time <= cutoff
-                   and 'x' in graph.nodes[node]
-                   and 'y' in graph.nodes[node]]
-    
-    reached_nodes = set([data['node'] for data in points_data])
+    points_data = [
+        {
+            "node": node,
+            "geometry": Point(graph.nodes[node]["x"], graph.nodes[node]["y"]),
+            "travel_time": travel_time,
+        }
+        for node, travel_time in travel_times.items()
+        if travel_time <= cutoff
+        and "x" in graph.nodes[node]
+        and "y" in graph.nodes[node]
+    ]
+
+    reached_nodes = set([data["node"] for data in points_data])
 
     # Filter edges so that both nodes are reached
-    reached_edges = [{'edge': (u, v), 'geometry': data['geometry']}
-                     for u, v, data in graph.edges(data=True)
-                     if u in reached_nodes 
-                     and v in reached_nodes 
-                     and 'geometry' in data
-                     and data['type'] == 'street'
-                     ]
-    
-    points_gdf = gpd.GeoDataFrame(points_data, geometry='geometry', crs="EPSG:4326")
-    edges_gdf = gpd.GeoDataFrame(reached_edges, geometry='geometry', crs="EPSG:4326")
-    
+    reached_edges = [
+        {"edge": (u, v), "geometry": data["geometry"]}
+        for u, v, data in graph.edges(data=True)
+        if u in reached_nodes
+        and v in reached_nodes
+        and "geometry" in data
+        and data["type"] == "street"
+    ]
+
+    points_gdf = gpd.GeoDataFrame(points_data, geometry="geometry", crs="EPSG:4326")
+    edges_gdf = gpd.GeoDataFrame(reached_edges, geometry="geometry", crs="EPSG:4326")
+
     # Combine the GeoDataFrames
     # Re-projection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
     merged_gdf = pd.concat([points_gdf, edges_gdf], ignore_index=True).to_crs("EPSG:4087")
     # Nodes and edges buffered and merged into a single polygon
     buffer_gdf = merged_gdf.buffer(buffer_radius)
-    
+
     service_area_polygon = buffer_gdf.unary_union
     # overlap_count is needed for percent_access calculation
-    service_area_gdf = gpd.GeoDataFrame({
-        'geometry': [service_area_polygon],
-        'id': source,'overlap_count': 1}, crs="EPSG:4087")
+    service_area_gdf = gpd.GeoDataFrame(
+        {"geometry": [service_area_polygon], "id": source, "overlap_count": 1}, crs="EPSG:4087"
+        )
     return service_area_gdf
 
 
@@ -239,24 +241,26 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
         cube = make_geocube(
             vector_data=sa,
             resolution=resolution,
-            measurements=['overlap_count'],
+            measurements=["overlap_count"],
         )
         rasters.append(cube)
-    
+
     # Combine the rasters into 3-dimensional xarray DataSet
     # Then sum the values along the 'summary' dimension
-    summarized_raster = xr.concat(rasters, dim='summary').sum(dim='summary')
+    summarized_raster = xr.concat(rasters, dim="summary").sum(dim="summary")
     # Vectorize the summarized raster back into a GeoDataFrame
     vectorized_result = vectorize(summarized_raster.overlap_count.astype("float32"))
-    
+
     # Filter the vectorized result to include only polygons that cover at least the threshold of the service areas
     polygons_needed = int(len(service_areas) * threshold)
-    vectorized_result = vectorized_result[vectorized_result['overlap_count'] >= polygons_needed].unary_union
-    result_gdf = gpd.GeoDataFrame({'geometry': [vectorized_result]}, crs="EPSG:4087")
-    
+    vectorized_result = vectorized_result[
+        vectorized_result["overlap_count"] >= polygons_needed
+    ].unary_union
+    result_gdf = gpd.GeoDataFrame({"geometry": [vectorized_result]}, crs="EPSG:4087")
+
     return result_gdf
- 
- 
+
+
 def percent_access_service_area(
         graph,
         source,
@@ -304,15 +308,16 @@ def percent_access_service_area(
         GeoDataFrame containing the vectorized result.
     """
 
-    service_areas = [service_area(
-        graph, source, timestamp, cutoff, buffer_radius, **kwargs
-        ) for timestamp in range(start_time, end_time, sample_interval)]
-    
+    service_areas = [
+        service_area(graph, source, timestamp, cutoff, buffer_radius, **kwargs)
+        for timestamp in range(start_time, end_time, sample_interval)
+    ]
+
     mean_area = _rasterize_service_areas(service_areas, threshold)
-    
+
     return mean_area
-    
- 
+
+
 def service_area_multiple_sources(
         graph,
         sources,
@@ -351,16 +356,20 @@ def service_area_multiple_sources(
         A GeoDataFrame containing the combined service area polygon for all sources.
     """
     # Prepare arguments for each task
-    tasks = [(graph, source, start_time, cutoff, buffer_radius, algorithm, hashtable) 
-             for source in sources]
-    
+    tasks = [
+        (graph, source, start_time, cutoff, buffer_radius, algorithm, hashtable)
+        for source in sources
+    ]
+
     with multiprocessing.Pool(processes=num_processes) as pool:
         results = pool.starmap(service_area, tasks)
-    
+
     # At this point, 'results' is a list of GeoDataFrames, each containing the service area polygon for a source
     # Combine all service area polygons into a single GeoDataFrame
-    combined_service_area = gpd.GeoDataFrame(pd.concat(results, ignore_index=True), crs="EPSG:4087")
- 
+    combined_service_area = gpd.GeoDataFrame(
+        pd.concat(results, ignore_index=True), crs="EPSG:4087"
+    )
+
     return combined_service_area
 
 
@@ -379,21 +388,23 @@ def last_service(graph):
     None
     """
     for node, data in graph.nodes(data=True):
-        if data['type'] == 'transit':
-            last_service_time = float('-inf')
+        if data["type"] == "transit":
+            last_service_time = float("-inf")
 
             for _, _, edge_data in graph.edges(node, data=True):
-                if 'sorted_schedules' in edge_data:
+                if "sorted_schedules" in edge_data:
                     # Get the last arrival and departure times
                     # from the sorted schedules
-                    last_arrival = edge_data['sorted_schedules'][-1][0]
-                    last_departure = edge_data['sorted_schedules'][-1][1]
+                    last_arrival = edge_data["sorted_schedules"][-1][0]
+                    last_departure = edge_data["sorted_schedules"][-1][1]
                     # Update the last service time if the current edge
                     # has a later service time
-                    last_service_time = max(last_service_time, last_arrival, last_departure)
+                    last_service_time = max(
+                        last_service_time, last_arrival, last_departure
+                    )
 
             # if the stop is not serviced, set last_service_time to None
-            if last_service_time == float('-inf'):
+            if last_service_time == float("-inf"):
                 last_service_time = None
 
-            data['last_service'] = last_service_time
+            data["last_service"] = last_service_time

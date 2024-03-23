@@ -22,18 +22,20 @@ def determine_utm_zone(gdf):
         UTM EPSG code as string.
     """
     # Ensure the GeoDataFrame is in geographic coordinates (EPSG:4326)
-    gdf_proj = gdf.to_crs('EPSG:4326')
-    
+    gdf_proj = gdf.to_crs("EPSG:4326")
+
     minx, miny, maxx, maxy = gdf_proj.total_bounds
     centroid_longitude = (minx + maxx) / 2
-    
+
     # Determine UTM zone number
     utm_zone = math.floor((centroid_longitude + 180) / 6) + 1
     # Determine hemisphere (north or south)
-    hemisphere = 'north' if (miny + maxy) / 2 >= 0 else 'south'
+    hemisphere = "north" if (miny + maxy) / 2 >= 0 else "south"
     # Construct EPSG code for UTM
-    epsg_code = f"EPSG:326{utm_zone}" if hemisphere == 'north' else f"EPSG:327{utm_zone}"
-    
+    epsg_code = (
+        f"EPSG:326{utm_zone}" if hemisphere == "north" else f"EPSG:327{utm_zone}"
+    )
+
     return epsg_code
 
 
@@ -56,7 +58,7 @@ def create_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
     utm_crs = determine_utm_zone(gdf)
     gdf_utm = gdf.to_crs(utm_crs)
     minx, miny, maxx, maxy = gdf_utm.total_bounds
-    
+
     nx = math.ceil((maxx - minx) / cell_size)
     ny = math.ceil((maxy - miny) / cell_size)
     grid_cells = []
@@ -68,9 +70,9 @@ def create_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
             y2 = y1 + cell_size
             cell = Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
             grid_cells.append(cell)
-    
+
     grid = gpd.GeoDataFrame(geometry=grid_cells, crs=utm_crs)
-    
+
     return grid
 
 
@@ -90,15 +92,16 @@ def create_centroids_dataframe(polygon_gdf):
     """
     # Create id column if it doesn't exist
     # ID is required for the explicit origin_id column in the final output
-    if 'id' not in polygon_gdf.columns:
-        polygon_gdf['id'] = polygon_gdf.index
+    if "id" not in polygon_gdf.columns:
+        polygon_gdf["id"] = polygon_gdf.index
     # Create a GeoDataFrame with these centroids
     # and include the 'origin_id' from the parent polygon
-    centroids_gdf = gpd.GeoDataFrame(polygon_gdf[['id']].copy(),
-                                     geometry=polygon_gdf.to_crs('EPSG:4087').geometry.centroid, 
-                                     crs='EPSG:4087'
-                                     )
-    centroids_gdf.rename(columns={'id': 'origin_id'}, inplace=True)
+    centroids_gdf = gpd.GeoDataFrame(
+        polygon_gdf[["id"]].copy(),
+        geometry=polygon_gdf.to_crs("EPSG:4087").geometry.centroid,
+        crs="EPSG:4087",
+    )
+    centroids_gdf.rename(columns={"id": "origin_id"}, inplace=True)
 
     return centroids_gdf
 
@@ -294,17 +297,22 @@ def separate_travel_times(graph, predecessors: dict, travel_times: dict, source)
     pandas.DataFrame
         A DataFrame containing the transit time and pedestrian time for each node.
     """
-    
     results = []
     for node in tqdm.tqdm(graph.nodes(data=True)):
         if node[0] != source:
             path = _reconstruct_path(node[0], predecessors)
             pedestrian_path = _unpack_path_vertices(path)
             pedestrian_time = _calculate_pedestrian_time(pedestrian_path, graph)
-            
+
             transit_time = travel_times[node[0]] - pedestrian_time
-            results.append({'node': node[0], 'transit_time': transit_time, 'pedestrian_time': pedestrian_time})
-        
+            results.append(
+                {
+                    "node": node[0],
+                    "transit_time": transit_time,
+                    "pedestrian_time": pedestrian_time,
+                }
+            )
+
     results = pd.DataFrame(results)
     return results
 
@@ -326,11 +334,11 @@ def process_graph_to_hash_table(graph):
     """
     schedules_hash = {}
     for from_node, to_node, data in graph.edges(data=True):
-        if 'sorted_schedules' in data:
-            schedules_hash[(from_node, to_node)] = data['sorted_schedules']
+        if "sorted_schedules" in data:
+            schedules_hash[(from_node, to_node)] = data["sorted_schedules"]
         else:
             # Static weight wrapped in a list of tuples to make it iterable
-            static_weight = data['weight']
+            static_weight = data["weight"]
             schedules_hash[(from_node, to_node)] = [
                 (static_weight,)
             ]  # comma is to make it a tuple

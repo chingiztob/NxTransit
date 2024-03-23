@@ -46,11 +46,13 @@ def test_last_service_with_mixed_edges():
     assert graph.nodes['B']['last_service'] == 40
     assert graph.nodes['C']['last_service'] is None
 
+
 def test_determine_utm_zone_north_hemisphere():
     # Create a GeoDataFrame with a centroid in the northern hemisphere
     gdf = gpd.GeoDataFrame(geometry=[Point(0, 30)], crs="EPSG:4326")
     utm_zone = nt.determine_utm_zone(gdf)
     assert utm_zone == "EPSG:32631"
+    
     
 def test_determine_utm_zone_equator():
     # Create a GeoDataFrame with a centroid on the equator
@@ -58,11 +60,13 @@ def test_determine_utm_zone_equator():
     utm_zone = nt.determine_utm_zone(gdf)
     assert utm_zone == "EPSG:32631"
 
+
 def test_determine_utm_zone_south_hemisphere():
     # Create a GeoDataFrame with a centroid in the southern hemisphere
     gdf = gpd.GeoDataFrame(geometry=[Point(0, -30)], crs="EPSG:4326")
     utm_zone = nt.determine_utm_zone(gdf)
     assert utm_zone == "EPSG:32731"
+
 
 def test_determine_utm_zone():
     gdf = gpd.GeoDataFrame(geometry=[Point(35, 55)], crs="EPSG:4326")
