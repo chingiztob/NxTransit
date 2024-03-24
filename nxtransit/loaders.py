@@ -229,16 +229,16 @@ def _load_GTFS(
 
     # Adding stops as nodes to the graph
     for _, stop in stops_df.iterrows():
-        G.add_node(stop['stop_id'],
-                   type='transit',
-                   pos=(stop['stop_lon'], stop['stop_lat']),
-                   x=stop['stop_lon'],
-                   y=stop['stop_lat']
-                   )
+        G.add_node(
+            stop["stop_id"],
+            type="transit",
+            pos=(stop["stop_lon"], stop["stop_lat"]),
+            x=stop["stop_lon"],
+            y=stop["stop_lat"],
+        )
 
     if multiprocessing:
-
-        print('Building graph in parallel')
+        print("Building graph in parallel")
         # Divide filtered_stops into chunks for parallel processing
         # Use half of the available CPU logical cores
         # (likely equal to the number of physical cores)
@@ -250,25 +250,28 @@ def _load_GTFS(
             # Create a subgraph in each process
             # Each will return a graph with edges for a subset of trips
             # The results will be combined into a single graph
-            results = pool.starmap(_add_edges_parallel,
-                                   [(G, chunk, trips_df, shapes,
-                                     read_shapes, trip_to_shape_map) for chunk in chunks
-                                    ])
+            results = pool.starmap(
+                _add_edges_parallel,
+                [
+                    (G, chunk, trips_df, shapes, read_shapes, trip_to_shape_map)
+                    for chunk in chunks
+                ],
+            )
 
         # Merge results from all processes
         merged_graph = nx.DiGraph()
 
         for graph in results:
             merged_graph.add_nodes_from(graph.nodes(data=True))
-        # Add edges from subgraphs to the merged graph 
+        # Add edges from subgraphs to the merged graph
         for graph in results:
             for u, v, data in graph.edges(data=True):
                 # If edge already exists, merge schedules
                 if merged_graph.has_edge(u, v):
                     # Merge sorted_schedules attribute
-                    existing_schedules = merged_graph[u][v]['schedules']
-                    new_schedules = data['schedules']
-                    merged_graph[u][v]['schedules'] = existing_schedules + new_schedules
+                    existing_schedules = merged_graph[u][v]["schedules"]
+                    new_schedules = data["schedules"]
+                    merged_graph[u][v]["schedules"] = existing_schedules + new_schedules
                 # If edge does not exist, add it
                 else:
                     # Add new edge with data
@@ -276,30 +279,29 @@ def _load_GTFS(
 
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(merged_graph)
-        logger.info('Transit graph created')
+        logger.info("Transit graph created")
 
         return merged_graph, stops_df
 
     else:
-
-        print('Building graph in a single process')
+        print("Building graph in a single process")
         # Splitting trips into groups by trip_id, then iteratively processing each group
         # For each group, sort by stop_sequence, then add edges to the graph
-        for trip_id, group in filtered_stops.groupby('trip_id'):
-            sorted_group = group.sort_values('stop_sequence')
+        for trip_id, group in filtered_stops.groupby("trip_id"):
+            sorted_group = group.sort_values("stop_sequence")
             _add_edges_to_graph(
                 G,
                 sorted_group,
-                trips_df = trips_df,
-                shapes = shapes,
-                read_shapes = read_shapes,
-                trip_to_shape_map = trip_to_shape_map
+                trips_df=trips_df,
+                shapes=shapes,
+                read_shapes=read_shapes,
+                trip_to_shape_map=trip_to_shape_map,
             )
 
         # Sorting schedules for faster lookup using binary search
         _preprocess_schedules(G)
 
-        logger.info('Transit graph created')
+        logger.info("Transit graph created")
 
         return G, stops_df
 
@@ -372,7 +374,7 @@ def feed_to_graph(
     output_graph_path: str = None,
     save_graphml: bool = False,
     load_graphml: bool = False,
-) -> tuple[nx.DiGraph, pd.DataFrame]:
+) -> nx.DiGraph:
     """
     Creates a directed graph (DiGraph) based on General Transit Feed Specification (GTFS) and OpenStreetMap (OSM) data.
 
@@ -438,7 +440,7 @@ def feed_to_graph(
     return G_combined
 
 
-def load_stops_gdf(path):
+def load_stops_gdf(path) -> gpd.GeoDataFrame:
     """
     Load stops data from a specified path and return a GeoDataFrame.
 
