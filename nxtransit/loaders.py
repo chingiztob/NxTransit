@@ -356,11 +356,9 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
     if save_graphml:
         ox.save_graphml(G_city, path)
 
-    # Convert MultiDiGraph from OSMNX to DiGraph
-    G_city = nx.DiGraph(G_city)
     logger.info("Street network graph created")
 
-    return G_city
+    return nx.DiGraph(G_city)
 
 
 def feed_to_graph(
@@ -431,7 +429,7 @@ def feed_to_graph(
     _fill_coordinates(G_combined)
 
     # Connecting stops to OSM streets
-    G_combined = connect_stops_to_streets(G_combined, stops)
+    connect_stops_to_streets(G_combined, stops)
 
     logger.info(
         f"Nodes: {G_combined.number_of_nodes()}, Edges: {G_combined.number_of_edges()}"

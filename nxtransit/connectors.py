@@ -81,8 +81,6 @@ def connect_stops_to_streets(graph, stops: pd.DataFrame):
                         geometry=linestring
                         )
 
-    return graph
-
 
 def snap_points_to_network(graph, points):
     """

@@ -76,7 +76,7 @@ def create_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
     return grid
 
 
-def create_centroids_dataframe(polygon_gdf):
+def create_centroids_dataframe(polygon_gdf) -> gpd.GeoDataFrame:
     """
     Creates a GeoDataFrame with the centroids of polygons from the given GeoDataFrame.
 
@@ -317,7 +317,7 @@ def separate_travel_times(graph, predecessors: dict, travel_times: dict, source)
     return results
 
 
-def process_graph_to_hash_table(graph):
+def process_graph_to_hash_table(graph) -> dict:
     """
     Process a graph and convert it into a hash table
     mapping edges to their sorted schedules or static weights.

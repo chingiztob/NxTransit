@@ -262,23 +262,23 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
 
 
 def percent_access_service_area(
-        graph,
-        source,
-        start_time,
-        end_time,
-        sample_interval,
-        cutoff,
-        buffer_radius,
-        threshold,
-        **kwargs
-):
+    graph,
+    source,
+    start_time,
+    end_time,
+    sample_interval,
+    cutoff,
+    buffer_radius,
+    threshold,
+    **kwargs,
+) -> gpd.GeoDataFrame:
     """
     Calculate service area reachable with specified chance within the given time period.
-    
+
     This tool rasterize service areas for each time step and overlays them.
-    Part of the raster that is covered by at least the threshold of 
+    Part of the raster that is covered by at least the threshold of
     the service areas is returned as a vectorized GeoDataFrame.
-    
+
     Parameters
     ----------
     graph : networkx.DiGraph
@@ -313,9 +313,7 @@ def percent_access_service_area(
         for timestamp in range(start_time, end_time, sample_interval)
     ]
 
-    mean_area = _rasterize_service_areas(service_areas, threshold)
-
-    return mean_area
+    return _rasterize_service_areas(service_areas, threshold)
 
 
 def service_area_multiple_sources(

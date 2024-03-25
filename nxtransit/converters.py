@@ -3,8 +3,7 @@ import time
 
 
 def parse_time_to_seconds(time_str: str) -> int:
-    """Converts a time string to the number of seconds since midnight.
-    """
+    """Converts a time string to the number of seconds since midnight"""
     try:
         if not isinstance(time_str, str):
             raise ValueError("Input must be a string.")
