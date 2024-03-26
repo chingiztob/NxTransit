@@ -7,7 +7,7 @@ import tqdm
 from shapely.geometry import Polygon
 
 
-def determine_utm_zone(gdf):
+def determine_utm_zone(gdf) -> str:
     """
     Determines the UTM zone for a GeoDataFrame based on its centroid.
     

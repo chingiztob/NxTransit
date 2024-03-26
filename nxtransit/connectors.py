@@ -29,8 +29,6 @@ def _fill_coordinates(graph):
         except Exception as e:
             raise Exception(f'{e} occurred for node {node}')
 
-    return graph
-
 
 def connect_stops_to_streets(graph, stops: pd.DataFrame):
     """

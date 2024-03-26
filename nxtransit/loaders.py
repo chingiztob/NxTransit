@@ -28,12 +28,11 @@ def _preprocess_schedules(graph: nx.DiGraph):
 
 
 def _add_edges_to_graph(graph: nx.DiGraph,
-                        sorted_stop_times: pd.DataFrame,
-                        trips_df: pd.DataFrame,
-                        shapes: dict,
-                        trip_to_shape_map: dict,
-                        read_shapes: bool = False
-                        ):
+                                  sorted_stop_times: pd.DataFrame,
+                                  trips_df: pd.DataFrame,
+                                  shapes: dict,
+                                  trip_to_shape_map: dict,
+                                  read_shapes: bool = False):
     """
     Adds edges with schedule information and optionally shape geometry between stops to the graph.
 
@@ -59,6 +58,14 @@ def _add_edges_to_graph(graph: nx.DiGraph,
     # Uses trip_id -> shape_id mapping to add shape geometry to the edge
     # In order to avoid searching the shapes DataFrame for each trip_id
 
+    # Precompute mappings from trips to route_id and wheelchair_accessible
+    
+    trip_route_mapping = trips_df.set_index('trip_id')['route_id'].to_dict()
+    if 'wheelchair_accessible' in trips_df.columns:
+        trip_wheelchair_mapping = trips_df.set_index('trip_id')['wheelchair_accessible'].to_dict()
+    else:
+        trip_wheelchair_mapping = {}
+
     for i in range(len(sorted_stop_times) - 1):
         start_stop = sorted_stop_times.iloc[i]
         end_stop = sorted_stop_times.iloc[i + 1]
@@ -67,39 +74,25 @@ def _add_edges_to_graph(graph: nx.DiGraph,
         departure = parse_time_to_seconds(start_stop["departure_time"])
         arrival = parse_time_to_seconds(end_stop["arrival_time"])
         trip_id = start_stop["trip_id"]
-
-        # Getting route_id from trips_df
-        # (searching by trip_id in trips_df and selecting route_id column)
-        route_id = trips_df.loc[trips_df["trip_id"] == trip_id, "route_id"].values[0]
-
-        if "wheelchair_accessible" in trips_df.columns:
-            wheelchair_accessible = trips_df.loc[
-                trips_df["trip_id"] == trip_id, "wheelchair_accessible"
-            ].values[0]
-        else:
-            wheelchair_accessible = None
-
+        
+        # Get route_id and wheelchair_accessible from dictionaries
+        route_id = trip_route_mapping.get(trip_id)
+        wheelchair_accessible = trip_wheelchair_mapping.get(trip_id, None)
+        
         schedule_info = (departure, arrival, route_id, wheelchair_accessible)
 
         geometry = None
         if read_shapes:
             shape_id = trip_to_shape_map.get(trip_id)
-            if shape_id in shapes:
-                geometry = shapes[shape_id]
+            geometry = shapes.get(shape_id)
 
-        # if edge already exists, add schedule to the list of schedules
-        # Currently the geometry is added to the first edge found
-
+        # manage schedules and geometry for existing/new edges
         if graph.has_edge(*edge):
             graph[edge[0]][edge[1]]["schedules"].append(schedule_info)
-        # Create a new edge otherwise
+            if read_shapes and "geometry" not in graph[edge[0]][edge[1]]:
+                graph[edge[0]][edge[1]]["geometry"] = geometry
         else:
-            if read_shapes:
-                graph.add_edge(
-                    *edge, schedules=[schedule_info], type="transit", geometry=geometry
-                )
-            else:
-                graph.add_edge(*edge, schedules=[schedule_info], type="transit")
+            graph.add_edge(*edge, schedules=[schedule_info], type="transit", geometry=geometry if read_shapes else None)
 
 
 def _add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map):
@@ -326,17 +319,17 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
         A street network graph with walking times as edge weights.
     """
     # Building a convex hull from stop coordinates for OSM loading
-    boundary = gpd.GeoSeries(
-        [Point(lon, lat) for lon, lat in zip(stops["stop_lon"], stops["stop_lat"])]
-    ).unary_union.convex_hull
+    stops_gdf = gpd.GeoDataFrame(stops, geometry=gpd.points_from_xy(stops.stop_lon, stops.stop_lat))
+    boundary = stops_gdf.unary_union.convex_hull
 
     logger.info("Loading OSM graph via OSMNX")
     # Loading OSM data within the convex hull
     G_city = ox.graph_from_polygon(boundary, network_type="walk", simplify=True)
-
+    
+    attributes_to_keep = {"length", "highway", "name"}
     for u, v, key, data in G_city.edges(keys=True, data=True):
         # Clean extra attributes
-        attributes_to_keep = {"length", "highway", "name"}
+        
         for attribute in list(data):
             if attribute not in attributes_to_keep:
                 del data[attribute]
@@ -350,8 +343,7 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
         v_geom = Point(G_city.nodes[v]["x"], G_city.nodes[v]["y"])
         data["geometry"] = LineString([u_geom, v_geom])
 
-    for _, data in G_city.nodes(data=True):
-        data["type"] = "street"
+    nx.set_node_attributes(G_city, "street", "type")
 
     if save_graphml:
         ox.save_graphml(G_city, path)
