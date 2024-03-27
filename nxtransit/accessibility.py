@@ -2,6 +2,7 @@
 import multiprocessing
 import time
 from functools import partial
+from typing import Any, Dict, Optional
 
 import geopandas as gpd
 import pandas as pd
@@ -9,10 +10,11 @@ import tqdm
 import xarray as xr
 from geocube.api.core import make_geocube
 from geocube.vector import vectorize
+from networkx import DiGraph
 from shapely.geometry import Point
 
-from .routers import single_source_time_dependent_dijkstra
 from .functions import determine_utm_zone
+from .routers import single_source_time_dependent_dijkstra
 
 
 def calculate_od_matrix(graph, nodes: list, departure_time: int,
@@ -144,7 +146,15 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, target_nodes=None
     return pd.DataFrame([item for sublist in results for item in sublist])
 
 
-def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = 'sorted', hashtable=None):
+def service_area(
+    graph: DiGraph,
+    source: Any,
+    start_time: int,
+    cutoff: float,
+    buffer_radius: float,
+    algorithm: str = "sorted",
+    hashtable: Optional[Dict] = None,
+) -> gpd.GeoDataFrame:
     """
     Creates a service area by buffering around all street edges within a travel time cutoff.
 
@@ -152,7 +162,7 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     ----------
     graph : networkx.DiGraph
         The graph to search.
-    source : hashable
+    source : node
         The graph node to start the search from.
     start_time : int
         The time to start the search from.
@@ -172,7 +182,7 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
 
     Notes
     -----
-    Output crs is UTM zone of centroids of the edges.
+    Output crs is EPSG:4087 (World Equidistant Cylindrical).
 
     See Also
     --------
@@ -218,7 +228,11 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     service_area_polygon = buffer_gdf.unary_union
     # overlap_count is needed for percent_access calculation
     service_area_gdf = gpd.GeoDataFrame(
-        {"geometry": [service_area_polygon], "id": source, "overlap_count": 1}, crs=utm_crs)
+        {
+            "geometry": [service_area_polygon], 
+            "id": source, 
+            "overlap_count": 1},
+        crs=utm_crs).to_crs("EPSG:4087")
     return service_area_gdf
 
 

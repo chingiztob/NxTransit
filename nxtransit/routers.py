@@ -210,6 +210,9 @@ def single_source_time_dependent_dijkstra_sorted(graph, source, start_time):
     """
     if source not in graph:
         raise ValueError(f"The source node {source} does not exist in the graph.")
+    
+    if not isinstance(start_time, (int, float)):
+        raise ValueError("The start time must be a number.")
 
     arrival_times = {node: float("inf") for node in graph.nodes}
     predecessors = {node: None for node in graph.nodes}
@@ -272,6 +275,9 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
 
     if source not in graph:
         raise ValueError(f"The source node {source} does not exist in the graph.")
+
+    if not isinstance(start_time, (int, float)):
+        raise ValueError("The start time must be a number.")
 
     arrival_times = {node: float("inf") for node in graph.nodes}
     predecessors = {node: None for node in graph.nodes}
