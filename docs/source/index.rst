@@ -41,7 +41,7 @@ Installation
 ------------
 .. code-block:: python
 
-    pip install NxTransit
+    pip install nxtransit
 
 Repository
 ----------

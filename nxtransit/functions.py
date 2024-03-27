@@ -39,21 +39,23 @@ def determine_utm_zone(gdf) -> str:
     return epsg_code
 
 
-def create_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
+def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
     """
-    Creates a grid of square cells covering the extent of the input GeoDataFrame.
+    Creates a grid of square cells covering the extent of the input GeoDataFrame, 
+    but only keeps cells that contain at least one feature from the source GeoDataFrame.
     
     Parameters
     ----------
     gdf : gpd.GeoDataFrame
-        The input GeoDataFrame representing the spatial extent.
+        The input GeoDataFrame representing the spatial extent and features.
     cell_size : float
-        The size of each square cell in the grid.
+        The size of each square cell in the grid in meters.
     
     Returns
     -------
     gpd.GeoDataFrame
-        The resulting grid GeoDataFrame.
+        The resulting filtered grid GeoDataFrame, with cells containing at least
+        one feature from the source GeoDataFrame.
     """
     utm_crs = determine_utm_zone(gdf)
     gdf_utm = gdf.to_crs(utm_crs)
@@ -73,7 +75,14 @@ def create_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
 
     grid = gpd.GeoDataFrame(geometry=grid_cells, crs=utm_crs)
 
-    return grid
+    # Perform a spatial join between the grid and the original GeoDataFrame
+    # This will keep only the grid cells that intersect with any feature from the source GeoDataFrame
+    filtered_grid = gpd.sjoin(grid, gdf_utm, how='inner').drop_duplicates(subset=['geometry'])
+    filtered_grid.reset_index(drop=True, inplace=True)
+    # return only the geometry column
+    filtered_grid = gpd.GeoDataFrame(geometry=filtered_grid.geometry, crs=utm_crs)
+
+    return filtered_grid
 
 
 def create_centroids_dataframe(polygon_gdf) -> gpd.GeoDataFrame:

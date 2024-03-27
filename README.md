@@ -28,7 +28,7 @@ NxTransit utilizes GTFS data, a common format for public transportation schedule
 
 ### Installation
 ```bash
-pip install NxTransit
+pip install nxtransit
 ```
 ### License
 Package is open source and licensed under the MIT license. OpenStreetMap's open data [license](https://www.openstreetmap.org/copyright/) requires that derivative works provide proper attribution. This package heavily depends on [OSMnx](https://geoffboeing.com/publications/osmnx-complex-street-networks/) by Geoff Boeing, which is also licensed under the MIT license.

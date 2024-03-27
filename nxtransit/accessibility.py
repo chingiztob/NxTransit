@@ -12,6 +12,7 @@ from geocube.vector import vectorize
 from shapely.geometry import Point
 
 from .routers import single_source_time_dependent_dijkstra
+from .functions import determine_utm_zone
 
 
 def calculate_od_matrix(graph, nodes: list, departure_time: int,
@@ -145,7 +146,7 @@ def calculate_od_matrix_parallel(graph, nodes, departure_time, target_nodes=None
 
 def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = 'sorted', hashtable=None):
     """
-    Creates a service area by buffering around all nodes within a travel time cutoff.
+    Creates a service area by buffering around all street edges within a travel time cutoff.
 
     Parameters
     ----------
@@ -168,6 +169,16 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
     -------
     geopandas.GeoDataFrame
         A GeoDataFrame containing the service area polygon.
+
+    Notes
+    -----
+    Output crs is UTM zone of centroids of the edges.
+
+    See Also
+    --------
+    nxtransit.accessibility.percent_access_service_area : Service area reachable with specified chance
+    nxtransit.accessibility.service_area_multiple_sources : Service areas for multiple sources using multiprocessing
+    nxtransit.functions.determine_utm_zone : Determine the UTM zone of a GeoDataFrame.
     """
 
     _, _, travel_times = single_source_time_dependent_dijkstra(
@@ -199,20 +210,15 @@ def service_area(graph, source, start_time, cutoff, buffer_radius, algorithm = '
         and data["type"] == "street"
     ]
 
-    points_gdf = gpd.GeoDataFrame(points_data, geometry="geometry", crs="EPSG:4326")
     edges_gdf = gpd.GeoDataFrame(reached_edges, geometry="geometry", crs="EPSG:4326")
-
-    # Combine the GeoDataFrames
+    utm_crs = determine_utm_zone(edges_gdf)
     # Re-projection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
-    merged_gdf = pd.concat([points_gdf, edges_gdf], ignore_index=True).to_crs("EPSG:4087")
-    # Nodes and edges buffered and merged into a single polygon
-    buffer_gdf = merged_gdf.buffer(buffer_radius)
+    buffer_gdf = edges_gdf.to_crs(crs = utm_crs).buffer(buffer_radius)
 
     service_area_polygon = buffer_gdf.unary_union
     # overlap_count is needed for percent_access calculation
     service_area_gdf = gpd.GeoDataFrame(
-        {"geometry": [service_area_polygon], "id": source, "overlap_count": 1}, crs="EPSG:4087"
-        )
+        {"geometry": [service_area_polygon], "id": source, "overlap_count": 1}, crs=utm_crs)
     return service_area_gdf
 
 
