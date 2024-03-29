@@ -131,11 +131,9 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
         for v in graph.neighbors(u):
             # If the neighbor has not been visited yet
             if v not in visited:
-                delay, route = _calculate_delay_sorted(graph,
-                                                       u, v,
-                                                       current_time,
-                                                       wheelchair=wheelchair
-                                                       )
+                delay, route = _calculate_delay_sorted(
+                    graph, u, v, current_time, wheelchair=wheelchair
+                )
                 # Skip the neighbor if the arrival time is infinite
                 if delay == float('inf'):
                     continue

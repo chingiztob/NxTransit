@@ -3,7 +3,6 @@ import os
 
 import geopandas as gpd
 import pandas as pd
-import tqdm
 from shapely.geometry import Polygon
 
 
@@ -210,6 +209,8 @@ def validate_feed(gtfs_path: str) -> bool:
 
         if not invalid_departure_times.empty or not invalid_arrival_times.empty:
             print("Invalid time format found in departure or arrival times in stop_times.txt.")
+            print(f"Invalid departure times: {invalid_departure_times['departure_time'].values}")
+            print(f"Invalid arrival times: {invalid_arrival_times['arrival_time'].values}")
         
         # Additional format and consistency checks= will be added
      
@@ -307,7 +308,7 @@ def separate_travel_times(graph, predecessors: dict, travel_times: dict, source)
         A DataFrame containing the transit time and pedestrian time for each node.
     """
     results = []
-    for node in tqdm.tqdm(graph.nodes(data=True)):
+    for node in graph.nodes(data=True):
         if node[0] != source:
             path = _reconstruct_path(node[0], predecessors)
             pedestrian_path = _unpack_path_vertices(path)

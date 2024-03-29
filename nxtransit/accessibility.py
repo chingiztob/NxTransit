@@ -1,4 +1,5 @@
 """Tools for calculating accessibility metrics"""
+
 import multiprocessing
 import time
 from functools import partial
@@ -6,7 +7,6 @@ from typing import Any, Dict, Optional
 
 import geopandas as gpd
 import pandas as pd
-import tqdm
 import xarray as xr
 from geocube.api.core import make_geocube
 from geocube.vector import vectorize
@@ -17,9 +17,9 @@ from .functions import determine_utm_zone
 from .routers import single_source_time_dependent_dijkstra
 
 
-def calculate_od_matrix(graph, nodes: list, departure_time: int,
-                        hashtable: dict = None, algorithm='sorted'
-                        ):
+def calculate_od_matrix(
+    graph, nodes: list, departure_time: int, hashtable: dict = None, algorithm="sorted"
+):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, nodes, and departure time.
 
@@ -48,7 +48,7 @@ def calculate_od_matrix(graph, nodes: list, departure_time: int,
 
     results = []
 
-    for source_node in tqdm.tqdm(nodes):
+    for source_node in nodes:
         # Calculate arrival times and travel times
         # for each node using the specified algorithm
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
@@ -65,9 +65,7 @@ def calculate_od_matrix(graph, nodes: list, departure_time: int,
                         "source_node": source_node,
                         "destination_node": dest_node,
                         "arrival_time": arrival_times[dest_node],
-                        "travel_time": travel_times.get(
-                            dest_node, None
-                        ),  # .get() to avoid KeyError
+                        "travel_time": travel_times.get(dest_node, None),  # .get() to avoid KeyError
                     }
                 )
 
@@ -77,31 +75,39 @@ def calculate_od_matrix(graph, nodes: list, departure_time: int,
     return results_df
 
 
-def _calculate_od_worker(source_node, nodes_list, graph, departure_time, hashtable=None):
+def _calculate_od_worker(
+    source_node, nodes_list, graph, departure_time, hashtable=None
+):
     """
     Internal worker function to calculate the OD matrix for a single source node.
     """
-    
+
     if hashtable:
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source_node, departure_time, hashtable, algorithm='hashed'
+            graph, source_node, departure_time, hashtable, algorithm="hashed"
         )
     else:
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source_node, departure_time, algorithm='sorted'
+            graph, source_node, departure_time, algorithm="sorted"
         )
-        
-    return [{
-        'source_node': source_node,
-        'destination_node': dest_node,
-        'arrival_time': arrival_times[dest_node],
-        'travel_time': travel_times.get(dest_node, None)
-    } for dest_node in nodes_list if dest_node in arrival_times]
+
+    return [
+        {
+            "source_node": source_node,
+            "destination_node": dest_node,
+            "arrival_time": arrival_times[dest_node],
+            "travel_time": travel_times.get(dest_node, None),
+        }
+        for dest_node in nodes_list
+        if dest_node in arrival_times
+    ]
 
 
-def calculate_od_matrix_parallel(graph, nodes, departure_time, target_nodes=None, num_processes=2, hashtable=None):
+def calculate_od_matrix_parallel(
+    graph, nodes, departure_time, target_nodes=None, num_processes=2, hashtable=None
+):
     """
-    Calculates the Origin-Destination (OD) matrix for a given graph, 
+    Calculates the Origin-Destination (OD) matrix for a given graph,
     nodes, and departure time using parallel processing.
 
     Parameters
@@ -171,9 +177,9 @@ def service_area(
     buffer_radius : float
         The radius in meters for buffering around each point.
     algorithm : str, optional
-        Algorithm to use for the service area calculation (default: 'sorted').
+        Algorithm to use for the service area calculation (default: "sorted").
     hashtable : dict, optional
-        Hashtable required for the algorithm.
+        Hashtable required for the "hashed" algorithm.
 
     Returns
     -------
@@ -223,16 +229,14 @@ def service_area(
     edges_gdf = gpd.GeoDataFrame(reached_edges, geometry="geometry", crs="EPSG:4326")
     utm_crs = determine_utm_zone(edges_gdf)
     # Re-projection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
-    buffer_gdf = edges_gdf.to_crs(crs = utm_crs).buffer(buffer_radius)
+    buffer_gdf = edges_gdf.to_crs(crs=utm_crs).buffer(buffer_radius)
 
     service_area_polygon = buffer_gdf.unary_union
     # overlap_count is needed for percent_access calculation
     service_area_gdf = gpd.GeoDataFrame(
-        {
-            "geometry": [service_area_polygon], 
-            "id": source, 
-            "overlap_count": 1},
-        crs=utm_crs).to_crs("EPSG:4087")
+        {"geometry": [service_area_polygon], "id": source, "overlap_count": 1},
+        crs=utm_crs,
+    ).to_crs("EPSG:4087")
     return service_area_gdf
 
 
@@ -337,14 +341,14 @@ def percent_access_service_area(
 
 
 def service_area_multiple_sources(
-        graph,
-        sources,
-        start_time,
-        cutoff,
-        buffer_radius,
-        algorithm='sorted',
-        hashtable=None,
-        num_processes=6
+    graph,
+    sources,
+    start_time,
+    cutoff,
+    buffer_radius,
+    algorithm="sorted",
+    hashtable=None,
+    num_processes=6,
 ):
     """
     Calculates service areas for multiple sources using multiprocessing, returning a combined service area polygon.
