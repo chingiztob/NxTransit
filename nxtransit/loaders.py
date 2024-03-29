@@ -15,108 +15,118 @@ from .other import logger
 
 
 def _preprocess_schedules(graph: nx.DiGraph):
-    # Sorting schedules for faster lookup using binary search
-    for edge in graph.edges(data=True):
-        if "schedules" in edge[2]:
-            edge[2]["sorted_schedules"] = sorted(
-                edge[2]["schedules"], key=lambda x: x[0]
-            )
-
-            edge[2]["departure_times"] = sorted(
-                [elem[0] for elem in edge[2]["sorted_schedules"]], key=lambda x: x
-            )
-
-
-def _add_edges_to_graph(graph: nx.DiGraph,
-                        sorted_stop_times: pd.DataFrame,
-                        trips_df: pd.DataFrame,
-                        stops_df: pd.DataFrame,  # Include stops_df as a parameter
-                        shapes: dict,
-                        trip_to_shape_map: dict,
-                        read_shapes: bool = False):
     """
-    Adds edges with schedule information and, optionally, shape geometry or simple line geometry between stops to the graph.
+    Sorts the schedules on each edge for faster lookup.
+    """
+    for _, _, data in graph.edges(data=True):
+        if "schedules" in data:
+            sorted_schedules = sorted(data["schedules"], key=lambda x: x[0])
+            data["sorted_schedules"] = sorted_schedules
+            data["departure_times"] = [schedule[0] for schedule in sorted_schedules]
+
+
+def _add_edge_with_geometry(graph, start_stop, end_stop, schedule_info, geometry):
+    """
+    Adds or updates an edge in the graph with schedule information and geometry.
+    """
+    edge = (start_stop["stop_id"], end_stop["stop_id"])
+    if graph.has_edge(*edge):
+        graph[edge[0]][edge[1]]["schedules"].append(schedule_info)
+        if "geometry" not in graph[edge[0]][edge[1]]:
+            graph[edge[0]][edge[1]]["geometry"] = geometry
+    else:
+        graph.add_edge(*edge, schedules=[schedule_info], type="transit", geometry=geometry)
+
+
+def _process_trip_group(
+    group, graph, trips_df, shapes, trip_to_shape_map, stops_df, read_shapes
+):
+    """
+    Processes a group of sorted stops for a single trip, adding edges between them to the graph.
 
     Parameters
     ----------
-    graph : nx.DiGraph
-        The networkx graph to which the edges will be added.
-    sorted_stop_times : pd.DataFrame
-        A DataFrame containing sorted stop times information.
+    group : pd.DataFrame
+        A group of sorted stops for a single trip.
+    graph : networkx.DiGraph
+        The graph to which the edges will be added.
     trips_df : pd.DataFrame
-        A DataFrame containing trip information, including shape_id.
-    stops_df : pd.DataFrame
-        A DataFrame containing stops information, including coordinates.
+        DataFrame containing trip information.
     shapes : dict
-        A dictionary mapping shape_ids to their respective linestring geometries.
+        Dictionary mapping shape IDs to shape geometries.
     trip_to_shape_map : dict
-        A dictionary mapping trip_ids to shape_ids.
-    read_shapes : bool, optional
-        If True, detailed shape geometries will be added to the edges; if False, simple line geometries will be used. Defaults to False.
+        Dictionary mapping trip IDs to shape IDs.
+    stops_df : pd.DataFrame
+        DataFrame containing stop information.
+    read_shapes : bool
+        Flag indicating whether to read shape geometries from shapes.txt.
+
+    Returns
+    -------
+    None
     """
-    # Create a mapping from stop_id to coordinates for fast lookup
-    stop_coords_mapping = stops_df.set_index('stop_id')[['stop_lat', 'stop_lon']].to_dict('index')
+    # Mapping stop_id to coordinates for faster lookup
+    stop_coords_mapping = stops_df.set_index("stop_id")[["stop_lat", "stop_lon"]].to_dict("index")
+    trip_route_mapping = trips_df.set_index("trip_id")["route_id"].to_dict()
 
-    trip_route_mapping = trips_df.set_index('trip_id')['route_id'].to_dict()
-
-    # Keep the original logic for checking 'wheelchair_accessible'
-    if 'wheelchair_accessible' in trips_df.columns:
-        trip_wheelchair_mapping = trips_df.set_index('trip_id')['wheelchair_accessible'].to_dict()
+    # Some GTFS feeds do not have wheelchair_accessible information
+    if "wheelchair_accessible" in trips_df.columns:
+        trip_wheelchair_mapping = trips_df.set_index("trip_id")["wheelchair_accessible"].to_dict()
     else:
         trip_wheelchair_mapping = {}
 
-    for i in range(len(sorted_stop_times) - 1):
-        start_stop = sorted_stop_times.iloc[i]
-        end_stop = sorted_stop_times.iloc[i + 1]
-        edge = (start_stop["stop_id"], end_stop["stop_id"])
-
-        departure = parse_time_to_seconds(start_stop["departure_time"])
-        arrival = parse_time_to_seconds(end_stop["arrival_time"])
+    # For each pair of consecutive stops in the group, add an edge to the graph
+    for i in range(len(group) - 1):
+        start_stop, end_stop = group.iloc[i], group.iloc[i + 1]
+        departure, arrival = (
+            parse_time_to_seconds(start_stop["departure_time"]),
+            parse_time_to_seconds(end_stop["arrival_time"]),
+        )
         trip_id = start_stop["trip_id"]
-
         route_id = trip_route_mapping.get(trip_id)
         wheelchair_accessible = trip_wheelchair_mapping.get(trip_id, None)
 
         schedule_info = (departure, arrival, route_id, wheelchair_accessible)
-
-        # Use detailed shapes if available and requested
+    
+        # If read_shapes is True, use the shape geometry from shapes.txt
         geometry = None
         if read_shapes:
             shape_id = trip_to_shape_map.get(trip_id)
             geometry = shapes.get(shape_id)
+        # Otherwise, use the stop coordinates to create a simple LineString geometry
         else:
-            # Create simple line geometry from start and end stop coordinates
-            start_coords = stop_coords_mapping.get(start_stop["stop_id"])
-            end_coords = stop_coords_mapping.get(end_stop["stop_id"])
+            start_coords, end_coords = (
+                stop_coords_mapping.get(start_stop["stop_id"]),
+                stop_coords_mapping.get(end_stop["stop_id"])
+            )
             if start_coords and end_coords:
-                geometry = LineString([(start_coords['stop_lon'], start_coords['stop_lat']),
-                                       (end_coords['stop_lon'], end_coords['stop_lat'])])
+                geometry = LineString(
+                    [
+                        (start_coords["stop_lon"], start_coords["stop_lat"]),
+                        (end_coords["stop_lon"], end_coords["stop_lat"]),
+                    ]
+                )
 
-        # Manage schedules and geometry for existing/new edges
-        if graph.has_edge(*edge):
-            graph[edge[0]][edge[1]]["schedules"].append(schedule_info)
-            if "geometry" not in graph[edge[0]][edge[1]] or read_shapes:
-                graph[edge[0]][edge[1]]["geometry"] = geometry
-        else:
-            graph.add_edge(*edge, schedules=[schedule_info], type="transit", geometry=geometry)
+        _add_edge_with_geometry(graph, start_stop, end_stop, schedule_info, geometry)
 
 
-
-def _add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map, stops_df):
+def _add_edges_parallel(
+    graph, trips_chunks, trips_df, shapes, read_shapes, trip_to_shape_map, stops_df
+):
     """
-    Adds edges to the graph for a chunk of trips.
+    Adds edges to the graph for chunks of trips in parallel.
     """
-    local_graph = graph.copy()  # Make a copy for local modifications
-    for trip_id, group in trips_chunk.groupby(["trip_id"]):
+    local_graph = graph.copy()
+    for _, group in trips_chunks.groupby(["trip_id"]):
         sorted_group = group.sort_values("stop_sequence")
-        _add_edges_to_graph(
-            local_graph,
+        _process_trip_group(
             sorted_group,
-            trips_df=trips_df,
-            shapes=shapes,
-            read_shapes=read_shapes,
-            trip_to_shape_map=trip_to_shape_map,
-            stops_df=stops_df
+            local_graph,
+            trips_df,
+            shapes,
+            trip_to_shape_map,
+            stops_df,
+            read_shapes,
         )
     return local_graph
 
@@ -213,8 +223,7 @@ def _load_GTFS(
     else:
         raise FileNotFoundError("Required file calendar.txt not found")
 
-    # Filter stop_times to only include trips that occur 
-    # within a specified time window
+    # Filter stop_times to only include trips that occur within a specified time window
     valid_trips = stop_times_df['trip_id'].isin(trips_df['trip_id'])
     stop_times_df = stop_times_df[valid_trips].dropna()
 
@@ -285,19 +294,16 @@ def _load_GTFS(
         return merged_graph, stops_df
 
     else:
-        print("Building graph in a single process")
-        # Splitting trips into groups by trip_id, then iteratively processing each group
-        # For each group, sort by stop_sequence, then add edges to the graph
         for trip_id, group in filtered_stops.groupby("trip_id"):
             sorted_group = group.sort_values("stop_sequence")
-            _add_edges_to_graph(
-                G,
+            _process_trip_group(
                 sorted_group,
-                trips_df=trips_df,
-                shapes=shapes,
-                read_shapes=read_shapes,
-                trip_to_shape_map=trip_to_shape_map,
-                stops_df=stops_df
+                G,
+                trips_df,
+                shapes,
+                trip_to_shape_map,
+                stops_df,
+                read_shapes,
             )
 
         # Sorting schedules for faster lookup using binary search
@@ -403,7 +409,7 @@ def feed_to_graph(
     Returns
     -------
     G_combined : nx.DiGraph
-        Combined directed graph.
+        Combined multimodal graph representing transit network.
     """
     G_transit, stops = _load_GTFS(
         GTFSpath,
