@@ -28,13 +28,14 @@ def _preprocess_schedules(graph: nx.DiGraph):
 
 
 def _add_edges_to_graph(graph: nx.DiGraph,
-                                  sorted_stop_times: pd.DataFrame,
-                                  trips_df: pd.DataFrame,
-                                  shapes: dict,
-                                  trip_to_shape_map: dict,
-                                  read_shapes: bool = False):
+                        sorted_stop_times: pd.DataFrame,
+                        trips_df: pd.DataFrame,
+                        stops_df: pd.DataFrame,  # Include stops_df as a parameter
+                        shapes: dict,
+                        trip_to_shape_map: dict,
+                        read_shapes: bool = False):
     """
-    Adds edges with schedule information and optionally shape geometry between stops to the graph.
+    Adds edges with schedule information and, optionally, shape geometry or simple line geometry between stops to the graph.
 
     Parameters
     ----------
@@ -44,23 +45,21 @@ def _add_edges_to_graph(graph: nx.DiGraph,
         A DataFrame containing sorted stop times information.
     trips_df : pd.DataFrame
         A DataFrame containing trip information, including shape_id.
+    stops_df : pd.DataFrame
+        A DataFrame containing stops information, including coordinates.
     shapes : dict
         A dictionary mapping shape_ids to their respective linestring geometries.
     trip_to_shape_map : dict
         A dictionary mapping trip_ids to shape_ids.
     read_shapes : bool, optional
-        If True, shape geometries will be added to the edges. Defaults to True.
+        If True, detailed shape geometries will be added to the edges; if False, simple line geometries will be used. Defaults to False.
     """
-    # For each pair of consecutive stops in the group (trip),
-    # create an edge with schedule information
-    # If the edge already exists, add the schedule to the list of schedules
+    # Create a mapping from stop_id to coordinates for fast lookup
+    stop_coords_mapping = stops_df.set_index('stop_id')[['stop_lat', 'stop_lon']].to_dict('index')
 
-    # Uses trip_id -> shape_id mapping to add shape geometry to the edge
-    # In order to avoid searching the shapes DataFrame for each trip_id
-
-    # Precompute mappings from trips to route_id and wheelchair_accessible
-    
     trip_route_mapping = trips_df.set_index('trip_id')['route_id'].to_dict()
+
+    # Keep the original logic for checking 'wheelchair_accessible'
     if 'wheelchair_accessible' in trips_df.columns:
         trip_wheelchair_mapping = trips_df.set_index('trip_id')['wheelchair_accessible'].to_dict()
     else:
@@ -74,28 +73,36 @@ def _add_edges_to_graph(graph: nx.DiGraph,
         departure = parse_time_to_seconds(start_stop["departure_time"])
         arrival = parse_time_to_seconds(end_stop["arrival_time"])
         trip_id = start_stop["trip_id"]
-        
-        # Get route_id and wheelchair_accessible from dictionaries
+
         route_id = trip_route_mapping.get(trip_id)
         wheelchair_accessible = trip_wheelchair_mapping.get(trip_id, None)
-        
+
         schedule_info = (departure, arrival, route_id, wheelchair_accessible)
 
+        # Use detailed shapes if available and requested
         geometry = None
         if read_shapes:
             shape_id = trip_to_shape_map.get(trip_id)
             geometry = shapes.get(shape_id)
+        else:
+            # Create simple line geometry from start and end stop coordinates
+            start_coords = stop_coords_mapping.get(start_stop["stop_id"])
+            end_coords = stop_coords_mapping.get(end_stop["stop_id"])
+            if start_coords and end_coords:
+                geometry = LineString([(start_coords['stop_lon'], start_coords['stop_lat']),
+                                       (end_coords['stop_lon'], end_coords['stop_lat'])])
 
-        # manage schedules and geometry for existing/new edges
+        # Manage schedules and geometry for existing/new edges
         if graph.has_edge(*edge):
             graph[edge[0]][edge[1]]["schedules"].append(schedule_info)
-            if read_shapes and "geometry" not in graph[edge[0]][edge[1]]:
+            if "geometry" not in graph[edge[0]][edge[1]] or read_shapes:
                 graph[edge[0]][edge[1]]["geometry"] = geometry
         else:
-            graph.add_edge(*edge, schedules=[schedule_info], type="transit", geometry=geometry if read_shapes else None)
+            graph.add_edge(*edge, schedules=[schedule_info], type="transit", geometry=geometry)
 
 
-def _add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map):
+
+def _add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_to_shape_map, stops_df):
     """
     Adds edges to the graph for a chunk of trips.
     """
@@ -109,6 +116,7 @@ def _add_edges_parallel(graph, trips_chunk, trips_df, shapes, read_shapes, trip_
             shapes=shapes,
             read_shapes=read_shapes,
             trip_to_shape_map=trip_to_shape_map,
+            stops_df=stops_df
         )
     return local_graph
 
@@ -246,7 +254,7 @@ def _load_GTFS(
             results = pool.starmap(
                 _add_edges_parallel,
                 [
-                    (G, chunk, trips_df, shapes, read_shapes, trip_to_shape_map)
+                    (G, chunk, trips_df, shapes, read_shapes, trip_to_shape_map, stops_df)
                     for chunk in chunks
                 ],
             )
@@ -289,6 +297,7 @@ def _load_GTFS(
                 shapes=shapes,
                 read_shapes=read_shapes,
                 trip_to_shape_map=trip_to_shape_map,
+                stops_df=stops_df
             )
 
         # Sorting schedules for faster lookup using binary search

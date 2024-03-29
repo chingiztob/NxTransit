@@ -41,7 +41,7 @@ def determine_utm_zone(gdf) -> str:
 def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
     """
     Creates a grid of square cells covering the extent of the input GeoDataFrame, 
-    but only keeps cells that contain at least one feature from the source GeoDataFrame.
+    and keeps cells that contain at least one feature from the source GeoDataFrame.
     
     Parameters
     ----------
@@ -53,8 +53,8 @@ def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFra
     Returns
     -------
     gpd.GeoDataFrame
-        The resulting filtered grid GeoDataFrame, with cells containing at least
-        one feature from the source GeoDataFrame.
+        The resulting grid GeoDataFrame, with cells containing at least
+        one feature from the source GeoDataFrame, and a 'id' for each cell.
     """
     utm_crs = determine_utm_zone(gdf)
     gdf_utm = gdf.to_crs(utm_crs)
@@ -63,6 +63,8 @@ def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFra
     nx = math.ceil((maxx - minx) / cell_size)
     ny = math.ceil((maxy - miny) / cell_size)
     grid_cells = []
+    grid_indices = []
+    index = 0  # Initialize a counter for the grid index
     for i in range(nx):
         for j in range(ny):
             x1 = minx + i * cell_size
@@ -71,15 +73,18 @@ def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFra
             y2 = y1 + cell_size
             cell = Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
             grid_cells.append(cell)
+            grid_indices.append(f"grid_{index}")  # Add the current index to the list
+            index += 1  # Increment the index for the next cell
 
-    grid = gpd.GeoDataFrame(geometry=grid_cells, crs=utm_crs)
+    # Create the initial grid GeoDataFrame
+    grid = gpd.GeoDataFrame({'id': grid_indices, 'geometry': grid_cells}, crs=utm_crs)
 
     # Perform a spatial join between the grid and the original GeoDataFrame
-    # This will keep only the grid cells that intersect with any feature from the source GeoDataFrame
-    filtered_grid = gpd.sjoin(grid, gdf_utm, how='inner').drop_duplicates(subset=['geometry'])
+    filtered_grid = gpd.sjoin(grid, gdf_utm, how='inner')
+
+    # Drop duplicates to ensure each cell is unique, keeping only 'geometry' and 'grid_index'
+    filtered_grid = filtered_grid[['geometry', 'id']].drop_duplicates(subset=['id'])
     filtered_grid.reset_index(drop=True, inplace=True)
-    # return only the geometry column
-    filtered_grid = gpd.GeoDataFrame(geometry=filtered_grid.geometry, crs=utm_crs)
 
     return filtered_grid
 
