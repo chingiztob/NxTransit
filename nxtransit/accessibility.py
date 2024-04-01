@@ -157,7 +157,7 @@ def service_area(
     source: Any,
     start_time: int,
     cutoff: float,
-    buffer_radius: float,
+    buffer_radius: float = 100,
     algorithm: str = "sorted",
     hashtable: Optional[Dict] = None,
 ) -> gpd.GeoDataFrame:
@@ -294,7 +294,8 @@ def percent_access_service_area(
     cutoff,
     buffer_radius,
     threshold,
-    **kwargs,
+    algorithm="sorted",
+    hashtable=None,
 ) -> gpd.GeoDataFrame:
     """
     Calculate service area reachable with specified chance within the given time period.
@@ -321,10 +322,10 @@ def percent_access_service_area(
         The radius of the buffer around the service area.
     threshold : float
         The threshold value for rasterizing the service areas.
-    **kwargs : dict
-        Additional keyword arguments for the service_area function.
-        - algorithm : str, optional. Algorithm to use for the service area calculation (default: 'sorted').
-        - hashtable : dict, optional. Hashtable required for the algorithm (default: None).
+    algorithm : str
+        optional. Algorithm to use for the service area calculation (default: 'sorted').
+    hashtable : dict, optional
+        Hashtable required for the algorithm (default: None).
 
     Returns
     -------
@@ -333,11 +334,19 @@ def percent_access_service_area(
     """
 
     service_areas = [
-        service_area(graph, source, timestamp, cutoff, buffer_radius, **kwargs)
+        service_area(
+            graph=graph,
+            source=source,
+            start_time=timestamp,
+            cutoff=cutoff,
+            buffer_radius=buffer_radius,
+            algorithm=algorithm,
+            hashtable=hashtable,
+        )
         for timestamp in range(start_time, end_time, sample_interval)
     ]
 
-    return _rasterize_service_areas(service_areas, threshold)
+    return _rasterize_service_areas(service_areas=service_areas, threshold=threshold)
 
 
 def service_area_multiple_sources(

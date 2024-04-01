@@ -394,7 +394,7 @@ def feed_to_graph(
     duration_seconds : int
         Time period from departure for which the graph will be loaded.
     read_shapes : bool, optional
-        Flag for reading geometry from shapes.txt file. Default is False.
+        Flag for reading geometry from shapes.txt file. Default is False. This parameter is currently not working as intended.
     multiprocessing : bool, optional
         Flag for using multiprocessing. Default is False.
     input_graph_path : str, optional
