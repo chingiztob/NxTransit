@@ -1,16 +1,17 @@
 """Load combined GTFS and OSM data into a graph."""
 import multiprocessing as mp
 import os
+from functools import partial
 
 import geopandas as gpd
 import networkx as nx
-import numpy as np
 import osmnx as ox
 import pandas as pd
 from shapely.geometry import LineString, Point
 
 from .connectors import _fill_coordinates, connect_stops_to_streets
 from .converters import parse_time_to_seconds
+from .functions import validate_feed
 from .other import logger
 
 
@@ -97,7 +98,7 @@ def _process_trip_group(
         else:
             start_coords, end_coords = (
                 stop_coords_mapping.get(start_stop["stop_id"]),
-                stop_coords_mapping.get(end_stop["stop_id"])
+                stop_coords_mapping.get(end_stop["stop_id"]),
             )
             if start_coords and end_coords:
                 geometry = LineString(
@@ -107,11 +108,17 @@ def _process_trip_group(
                     ]
                 )
 
-        _add_edge_with_geometry(graph, start_stop, end_stop, schedule_info, geometry)
+        _add_edge_with_geometry(
+            graph=graph,
+            start_stop=start_stop,
+            end_stop=end_stop,
+            schedule_info=schedule_info,
+            geometry=geometry,
+        )
 
 
 def _add_edges_parallel(
-    graph, trips_chunks, trips_df, shapes, read_shapes, trip_to_shape_map, stops_df
+    trips_chunks, graph, trips_df, shapes, read_shapes, trip_to_shape_map, stops_df
 ):
     """
     Adds edges to the graph for chunks of trips in parallel.
@@ -120,13 +127,13 @@ def _add_edges_parallel(
     for _, group in trips_chunks.groupby(["trip_id"]):
         sorted_group = group.sort_values("stop_sequence")
         _process_trip_group(
-            sorted_group,
-            local_graph,
-            trips_df,
-            shapes,
-            trip_to_shape_map,
-            stops_df,
-            read_shapes,
+            group=sorted_group,
+            graph=local_graph,
+            trips_df=trips_df,
+            shapes=shapes,
+            trip_to_shape_map=trip_to_shape_map,
+            stops_df=stops_df,
+            read_shapes=read_shapes,
         )
     return local_graph
 
@@ -138,6 +145,42 @@ def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, du
     return stop_times[
         (stop_times['departure_time_seconds'] >= departure_time) &
         (stop_times['departure_time_seconds'] <= departure_time + duration_seconds)
+    ]
+
+
+def _split_dataframe(df, n_splits):
+    """
+    Splits a DataFrame into n equal parts by rows.
+    This function replaces np.split_array which will be deprecated soon.
+    
+    Parameters
+    ----------
+    df : pandas DataFrame
+        The DataFrame to be split.
+    n_splits : int
+        The number of parts to split the DataFrame into.
+    
+    Returns
+    -------
+    list of pandas DataFrame
+        A list of DataFrame parts.
+    """
+    # Calculate split sizes
+    total_rows = len(df)
+    base_size = total_rows // n_splits
+    remainder = total_rows % n_splits
+
+    # Determine the number of rows each split will have
+    split_sizes = [
+        base_size + 1 if i < remainder 
+        else base_size for i in range(n_splits)
+    ]
+    # Calculate the start indices for each split
+    start_indices = [sum(split_sizes[:i]) for i in range(n_splits)]
+
+    return [
+        df.iloc[start : start + size] for start, size 
+        in zip(start_indices, split_sizes)
     ]
 
 
@@ -175,24 +218,23 @@ def _load_GTFS(
     """
     # Initialize the graph and read data files.
     G = nx.DiGraph()
-
-    stops_df = pd.read_csv(os.path.join(GTFSpath, "stops.txt"),
-                           usecols=['stop_id', 'stop_lat', 'stop_lon'])
-
-    stop_times_df = pd.read_csv(os.path.join(GTFSpath, "stop_times.txt"),
-                                usecols=['departure_time',
-                                         'trip_id',
-                                         'stop_id',
-                                         'stop_sequence',
-                                         'arrival_time'])
-
+    stops_df = pd.read_csv(
+        os.path.join(GTFSpath, "stops.txt"), 
+        usecols=["stop_id", "stop_lat", "stop_lon"]
+    )
+    stop_times_df = pd.read_csv(
+        os.path.join(GTFSpath, "stop_times.txt"),
+        usecols=["departure_time", "trip_id", "stop_id", "stop_sequence", "arrival_time"]
+    )
+    routes = pd.read_csv(
+        os.path.join(GTFSpath, "routes.txt"), usecols=["route_id", "route_short_name"]
+    )
     trips_df = pd.read_csv(os.path.join(GTFSpath, "trips.txt"))
-
-    routes = pd.read_csv(os.path.join(GTFSpath, "routes.txt"), 
-                         usecols=['route_id', 'route_short_name'])
-
+    calendar_df = pd.read_csv(os.path.join(GTFSpath, "calendar.txt"))
+    
     # Load shapes.txt if read_shapes is True
     if read_shapes:
+        logger.warning("Reading shapes is currently not working as intended")
         if "shapes.txt" not in os.listdir(GTFSpath):
             raise FileNotFoundError("shapes.txt not found")
 
@@ -210,32 +252,24 @@ def _load_GTFS(
         shapes = None
         trip_to_shape_map = None
 
-    # Join route information to trips``
+    # Join route information to trips
     trips_df = trips_df.merge(routes, on="route_id")
+    # Filter trips by day of the week
+    service_ids = calendar_df[calendar_df[day_of_week] == 1]["service_id"]
+    trips_df = trips_df[trips_df["service_id"].isin(service_ids)]
 
-    # Check if calendar.txt exists in GTFS directory
-    # If it does, filter by day of the week, otherwise raise an error
-    if "calendar.txt" in os.listdir(GTFSpath):
-        calendar_df = pd.read_csv(os.path.join(GTFSpath, "calendar.txt"))
-        # Filter for the day of the week
-        service_ids = calendar_df[calendar_df[day_of_week] == 1]["service_id"]
-        trips_df = trips_df[trips_df["service_id"].isin(service_ids)]
-    else:
-        raise FileNotFoundError("Required file calendar.txt not found")
-
-    # Filter stop_times to only include trips that occur within a specified time window
+    # Filter stop_times by valid trips
     valid_trips = stop_times_df['trip_id'].isin(trips_df['trip_id'])
     stop_times_df = stop_times_df[valid_trips].dropna()
 
     # Convert departure_time from HH:MM:SS o seconds
     departure_time_seconds = parse_time_to_seconds(departure_time_input)
     # Filtering stop_times by time window
-    filtered_stops = _filter_stop_times_by_time(stop_times_df,
-                                                departure_time_seconds,
-                                                duration_seconds
-                                                )
+    filtered_stops = _filter_stop_times_by_time(
+        stop_times_df, departure_time_seconds, duration_seconds
+    )
 
-    print(f'GTFS data loaded\n{len(filtered_stops)} of {len(stop_times_df)} trips retained')
+    print(f'{len(filtered_stops)} of {len(stop_times_df)} trips retained')
 
     # Adding stops as nodes to the graph
     for _, stop in stops_df.iterrows():
@@ -253,20 +287,22 @@ def _load_GTFS(
         # Use half of the available CPU logical cores
         # (likely equal to the number of physical cores)
         num_cores = int(mp.cpu_count() / 2)
-        chunks = np.array_split(filtered_stops, num_cores)
+        chunks = _split_dataframe(filtered_stops, num_cores)
 
         # Create a pool of processes
         with mp.Pool(processes=num_cores) as pool:
             # Create a subgraph in each process
             # Each will return a graph with edges for a subset of trips
             # The results will be combined into a single graph
-            results = pool.starmap(
-                _add_edges_parallel,
-                [
-                    (G, chunk, trips_df, shapes, read_shapes, trip_to_shape_map, stops_df)
-                    for chunk in chunks
-                ],
+            add_edges_partial = partial(_add_edges_parallel,
+                graph=G,
+                trips_df=trips_df,
+                shapes=shapes,
+                read_shapes=read_shapes,
+                trip_to_shape_map=trip_to_shape_map,
+                stops_df=stops_df
             )
+            results = pool.map(add_edges_partial, chunks)
 
         # Merge results from all processes
         merged_graph = nx.DiGraph()
@@ -297,18 +333,17 @@ def _load_GTFS(
         for trip_id, group in filtered_stops.groupby("trip_id"):
             sorted_group = group.sort_values("stop_sequence")
             _process_trip_group(
-                sorted_group,
-                G,
-                trips_df,
-                shapes,
-                trip_to_shape_map,
-                stops_df,
-                read_shapes,
+                group=sorted_group,
+                graph=G,
+                trips_df=trips_df,
+                shapes=shapes,
+                trip_to_shape_map=trip_to_shape_map,
+                stops_df=stops_df,
+                read_shapes=read_shapes,
             )
 
         # Sorting schedules for faster lookup using binary search
-        _preprocess_schedules(G)
-
+        _preprocess_schedules(graph=G)
         logger.info("Transit graph created")
 
         return G, stops_df
@@ -411,6 +446,11 @@ def feed_to_graph(
     G_combined : nx.DiGraph
         Combined multimodal graph representing transit network.
     """
+    # Validate the GTFS feed
+    bool_feed_valid = validate_feed(GTFSpath)
+    if not bool_feed_valid:
+        raise ValueError("The GTFS feed is not valid")
+    
     G_transit, stops = _load_GTFS(
         GTFSpath,
         departure_time_input,

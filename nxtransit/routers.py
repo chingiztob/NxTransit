@@ -335,10 +335,12 @@ def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashta
     nxtransit.functions.process_graph_to_hash_table : Create a hash table for quick access to sorted schedules.
     """
     if algorithm == "sorted":
-        return single_source_time_dependent_dijkstra_sorted(graph, source, start_time)
+        return single_source_time_dependent_dijkstra_sorted(
+            graph=graph, source=source, start_time=start_time
+        )
     elif algorithm == "hashed":
         return single_source_time_dependent_dijkstra_hashed(
-            graph, source, start_time, hashtable
+            graph=graph, source=source, start_time=start_time, hashtable=hashtable
         )
     else:
         raise (ValueError, "Invalid algorithm. Use 'sorted' or 'hashed'")
