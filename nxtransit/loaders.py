@@ -162,7 +162,7 @@ def _split_dataframe(df, n_splits):
     
     Returns
     -------
-    list of pandas DataFrame
+    list of pandas DataFrames
         A list of DataFrame parts.
     """
     # Calculate split sizes
@@ -369,17 +369,18 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
         A street network graph with walking times as edge weights.
     """
     # Building a convex hull from stop coordinates for OSM loading
-    stops_gdf = gpd.GeoDataFrame(stops, geometry=gpd.points_from_xy(stops.stop_lon, stops.stop_lat))
+    stops_gdf = gpd.GeoDataFrame(
+        stops, geometry=gpd.points_from_xy(stops.stop_lon, stops.stop_lat)
+    )
     boundary = stops_gdf.unary_union.convex_hull
 
     logger.info("Loading OSM graph via OSMNX")
     # Loading OSM data within the convex hull
     G_city = ox.graph_from_polygon(boundary, network_type="walk", simplify=True)
-    
+
     attributes_to_keep = {"length", "highway", "name"}
     for u, v, key, data in G_city.edges(keys=True, data=True):
         # Clean extra attributes
-        
         for attribute in list(data):
             if attribute not in attributes_to_keep:
                 del data[attribute]
