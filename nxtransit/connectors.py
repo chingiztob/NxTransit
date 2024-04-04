@@ -3,9 +3,11 @@ import pandas as pd
 import shapely.geometry
 from scipy.spatial import KDTree
 from pyproj import Transformer, CRS
+from geopandas import GeoDataFrame
+from networkx import DiGraph
 
 
-def _fill_coordinates(graph):
+def _fill_coordinates(graph: DiGraph):
     """
     Transforms the coordinates of nodes in the graph from EPSG:4326 to EPSG:4087.
     Populates 'metric_X' and 'metric_Y' attributes of the nodes.
@@ -30,7 +32,7 @@ def _fill_coordinates(graph):
             raise Exception(f'{e} occurred for node {node}')
 
 
-def connect_stops_to_streets(graph, stops: pd.DataFrame):
+def connect_stops_to_streets(graph: DiGraph, stops: pd.DataFrame):
     """
     Connects GTFS stops to the nearest street node in the graph
     using projected coordinates in EPSG:4087.
@@ -76,7 +78,7 @@ def connect_stops_to_streets(graph, stops: pd.DataFrame):
                         )
 
 
-def snap_points_to_network(graph, points):
+def snap_points_to_network(graph: DiGraph, points: GeoDataFrame):
     """
     Snaps point features from GeoDataFrame to the nearest street node in the graph.
 
@@ -90,10 +92,6 @@ def snap_points_to_network(graph, points):
     Returns
     -------
         None. The input graph is modified in-place with added snapped points as nodes.
-    
-    Notes
-    -----
-    points CRS must be EPSG:4326
     """
     # Create a list of street node tuples (x, y, node_id)
     node_data = [
@@ -106,9 +104,10 @@ def snap_points_to_network(graph, points):
     # The tree is created from a list of street node tuples (x, y, node_id)
     tree = KDTree([(x, y) for x, y, _, _, _ in node_data])
     
-    crs_4326 = CRS.from_epsg(4326)
+    input_epsg = points.crs.to_epsg()
+    crs_input = CRS.from_epsg(input_epsg)
     crs_4087 = CRS.from_epsg(4087)
-    transformer = Transformer.from_crs(crs_4326, crs_4087)
+    transformer = Transformer.from_crs(crs_input, crs_4087)
     
     if 'origin_id' not in points.columns:
         points['origin_id'] = points.index
@@ -117,7 +116,7 @@ def snap_points_to_network(graph, points):
 
         geometry = row['geometry']
         point_id = row['origin_id']
-        pnt_x, pnt_y = transformer.transform(geometry.y, geometry.x)
+        pnt_x, pnt_y = transformer.transform(xx=geometry.x, yy=geometry.y)
 
         # query returns the distance to the nearest neighbor and its index in the tree
         distance, idx = tree.query((pnt_x, pnt_y))

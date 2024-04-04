@@ -18,7 +18,7 @@ from .routers import single_source_time_dependent_dijkstra
 
 
 def calculate_od_matrix(
-    graph, nodes: list, departure_time: int, hashtable: dict = None, algorithm="sorted"
+    graph: DiGraph, nodes: list, departure_time: float, hashtable: dict = None, algorithm="sorted"
 ):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, nodes, and departure time.
@@ -104,8 +104,13 @@ def _calculate_od_worker(
 
 
 def calculate_od_matrix_parallel(
-    graph, nodes, departure_time, target_nodes=None, num_processes=2, hashtable=None
-):
+    graph: DiGraph,
+    nodes,
+    departure_time: float,
+    target_nodes: list = None,
+    num_processes: int = 2,
+    hashtable: dict = None,
+) -> pd.DataFrame:
     """
     Calculates the Origin-Destination (OD) matrix for a given graph,
     nodes, and departure time using parallel processing.
@@ -286,16 +291,16 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
 
 
 def percent_access_service_area(
-    graph,
-    source,
-    start_time,
-    end_time,
-    sample_interval,
-    cutoff,
-    buffer_radius,
-    threshold,
-    algorithm="sorted",
-    hashtable=None,
+    graph: DiGraph,
+    source: Any,
+    start_time: int,
+    end_time: int,
+    sample_interval: int,
+    cutoff: int,
+    buffer_radius: float,
+    threshold: float,
+    algorithm: str = "sorted",
+    hashtable: Optional[Dict] = None,
 ) -> gpd.GeoDataFrame:
     """
     Calculate service area reachable with specified chance within the given time period.
@@ -350,15 +355,15 @@ def percent_access_service_area(
 
 
 def service_area_multiple_sources(
-    graph,
-    sources,
-    start_time,
-    cutoff,
-    buffer_radius,
-    algorithm="sorted",
-    hashtable=None,
-    num_processes=6,
-):
+    graph: DiGraph,
+    sources: list,
+    start_time: int,
+    cutoff: int,
+    buffer_radius: float,
+    algorithm: str = "sorted",
+    hashtable: Optional[Dict] = None,
+    num_processes: int = 6,
+) -> gpd.GeoDataFrame:
     """
     Calculates service areas for multiple sources using multiprocessing, returning a combined service area polygon.
 
@@ -404,7 +409,7 @@ def service_area_multiple_sources(
     return combined_service_area
 
 
-def last_service(graph):
+def last_service(graph: DiGraph):
     """
     Calculate the last service time for each stop in the graph.
     Populates the 'last_service' attribute of each transit stop.

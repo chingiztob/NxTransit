@@ -100,13 +100,12 @@ def _process_trip_group(
                 stop_coords_mapping.get(start_stop["stop_id"]),
                 stop_coords_mapping.get(end_stop["stop_id"]),
             )
-            if start_coords and end_coords:
-                geometry = LineString(
-                    [
-                        (start_coords["stop_lon"], start_coords["stop_lat"]),
-                        (end_coords["stop_lon"], end_coords["stop_lat"]),
-                    ]
-                )
+            geometry = LineString(
+                [
+                    (start_coords["stop_lon"], start_coords["stop_lat"]),
+                    (end_coords["stop_lon"], end_coords["stop_lat"]),
+                ]
+            )
 
         _add_edge_with_geometry(
             graph=graph,
@@ -148,7 +147,7 @@ def _filter_stop_times_by_time(stop_times: pd.DataFrame, departure_time: int, du
     ]
 
 
-def _split_dataframe(df, n_splits):
+def _split_dataframe(df: pd.DataFrame, n_splits: int) -> list[pd.DataFrame]:
     """
     Splits a DataFrame into n equal parts by rows.
     This function replaces np.split_array which will be deprecated soon.
@@ -475,7 +474,6 @@ def feed_to_graph(
     G_combined = nx.compose(G_transit, G_city)
     # Filling projected coordinates for graph nodes
     _fill_coordinates(G_combined)
-
     # Connecting stops to OSM streets
     connect_stops_to_streets(G_combined, stops)
 

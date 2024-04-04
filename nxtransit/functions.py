@@ -6,7 +6,7 @@ import pandas as pd
 from shapely.geometry import Polygon
 
 
-def determine_utm_zone(gdf) -> str:
+def determine_utm_zone(gdf: gpd.GeoDataFrame) -> str:
     """
     Determines the UTM zone for a GeoDataFrame based on its centroid.
     
@@ -80,7 +80,7 @@ def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFra
     grid = gpd.GeoDataFrame({'id': grid_indices, 'geometry': grid_cells}, crs=utm_crs)
 
     # Perform a spatial join between the grid and the original GeoDataFrame
-    filtered_grid = gpd.sjoin(grid, gdf_utm, how='inner')
+    filtered_grid = gpd.sjoin(grid, gdf_utm[['geometry']], how='inner')
 
     # Drop duplicates to ensure each cell is unique, keeping only 'geometry' and 'grid_index'
     filtered_grid = filtered_grid[['geometry', 'id']].drop_duplicates(subset=['id'])
@@ -89,7 +89,7 @@ def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFra
     return filtered_grid
 
 
-def create_centroids_dataframe(polygon_gdf) -> gpd.GeoDataFrame:
+def create_centroids_dataframe(polygon_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Creates a GeoDataFrame with the centroids of polygons from the given GeoDataFrame.
 
