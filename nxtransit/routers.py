@@ -1,6 +1,8 @@
 """Main routing algorithms for time-dependent graphs."""
-from heapq import heappop, heappush
 import bisect
+from heapq import heappop, heappush
+
+from networkx import DiGraph
 
 
 def _calculate_delay_sorted_nr(graph, from_node, to_node, current_time, wheelchair=False):
@@ -302,7 +304,9 @@ def single_source_time_dependent_dijkstra_hashed(graph, source, start_time, hash
     return arrival_times, predecessors, travel_times
 
 
-def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashtable: dict = None, algorithm='sorted'):
+def single_source_time_dependent_dijkstra(
+    graph: DiGraph, source, start_time: int, hashtable: dict = None, algorithm="sorted"
+) -> tuple[dict, dict, dict]:
     """
     Compute the shortest paths and travel times from a single source node to all other nodes in a time-dependent graph.
     You can use the `process_graph_to_hash_table` function to create the hash table.
@@ -329,7 +333,7 @@ def single_source_time_dependent_dijkstra(graph, source, start_time: int, hashta
             - arrival_times: A dictionary mapping each node to the earliest arrival time from the source node.
             - predecessors: A dictionary mapping each node to its predecessor on the shortest path from the source node.
             - travel_times: A dictionary mapping each node to the travel time from the source node.
-            
+
     See Also
     --------
     nxtransit.functions.process_graph_to_hash_table : Create a hash table for quick access to sorted schedules.

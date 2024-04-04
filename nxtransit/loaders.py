@@ -83,12 +83,18 @@ def _process_trip_group(
             parse_time_to_seconds(start_stop["departure_time"]),
             parse_time_to_seconds(end_stop["arrival_time"]),
         )
+        if departure > arrival:
+            raise ValueError(
+                f"Departure time {departure} is greater than arrival time {arrival} for edge {start_stop['stop_id']} -> {end_stop['stop_id']}\n"
+                "Negative travel time not allowed\n"
+                "Check the GTFS feed for errors in stop_times.txt or calendar.txt, or adjust the departure time\n"
+            )
+
         trip_id = start_stop["trip_id"]
         route_id = trip_route_mapping.get(trip_id)
         wheelchair_accessible = trip_wheelchair_mapping.get(trip_id, None)
-
         schedule_info = (departure, arrival, route_id, wheelchair_accessible)
-    
+
         # If read_shapes is True, use the shape geometry from shapes.txt
         geometry = None
         if read_shapes:
@@ -285,7 +291,7 @@ def _load_GTFS(
         # Divide filtered_stops into chunks for parallel processing
         # Use half of the available CPU logical cores
         # (likely equal to the number of physical cores)
-        num_cores = int(mp.cpu_count() / 2)
+        num_cores = int(mp.cpu_count() / 2) if mp.cpu_count() > 1 else 1
         chunks = _split_dataframe(filtered_stops, num_cores)
 
         # Create a pool of processes
