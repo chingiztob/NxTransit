@@ -8,7 +8,7 @@ Key Features:
 - Time-Dependent Calculations: The package allows for the analysis of transit dynamics by considering the time-dependency of transit schedules. This includes calculating shortest paths with departure times, travel time matrices, and service frequency.
 - GTFS Data Support: NxTransit uses GTFS data, a common format for public transportation schedules and associated geographic information, as the basis for graph construction and analysis.
 """
-__version__ = "0.1.21"
+__version__ = "0.1.22"
 
 from .loaders import feed_to_graph
 from .loaders import load_stops_gdf

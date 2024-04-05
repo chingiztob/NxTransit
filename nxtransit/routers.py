@@ -40,6 +40,7 @@ def _calculate_delay_sorted(graph, from_node, to_node, current_time, wheelchair=
         
         if idx < len(schedules):
             next_departure, next_arrival, route, wheelchair_acc = schedules[idx]
+            # Not very much explicit but best way to reduce computational overhead
             if not wheelchair or wheelchair_acc == 1:
                 return next_departure - current_time + (next_arrival - next_departure), route
         

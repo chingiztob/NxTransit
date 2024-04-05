@@ -1,5 +1,6 @@
 import math
 import os
+import warnings
 
 import geopandas as gpd
 import pandas as pd
@@ -133,6 +134,9 @@ def validate_feed(gtfs_path: str) -> bool:
     bool
         True if the GTFS feed is valid, False otherwise.
     """
+    if not os.path.isdir(gtfs_path):
+        warnings.warn("Invalid GTFS path.")
+        return False
 
     # List of required GTFS files
     required_files = [
@@ -143,7 +147,7 @@ def validate_feed(gtfs_path: str) -> bool:
     # Check for the existence of required GTFS files
     for file in required_files:
         if not os.path.isfile(os.path.join(gtfs_path, file)):
-            print(f"Missing required file: {file}")
+            warnings.warn(f"Missing required file: {file}")
             return False
 
     try:
@@ -191,17 +195,21 @@ def validate_feed(gtfs_path: str) -> bool:
 
         if not set(stop_times_df['trip_id']).issubset(set(trips_df['trip_id'])):
             print("Mismatch in trip IDs between stop_times and trips files.")
+            critical_errors = True
 
         if not set(stop_times_df['stop_id']).issubset(set(stops_df['stop_id'])):
             print("Mismatch in stop IDs between stop_times and stops files.")
+            critical_errors = True
 
         # Validate calendar.txt
         if calendar_df.empty:
             print("calendar.txt is invalid or empty.")
+            critical_errors = True
 
         # Validate stop_times.txt for blank times and format of times
         if 'departure_time' not in stop_times_df.columns or 'arrival_time' not in stop_times_df.columns:
             print("stop_times.txt is missing required time columns.")
+            critical_errors = True
 
         # Check for blank times
         if stop_times_df['departure_time'].isnull().any() or stop_times_df['arrival_time'].isnull().any():
