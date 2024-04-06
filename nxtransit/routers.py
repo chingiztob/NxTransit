@@ -3,7 +3,7 @@ import bisect
 from heapq import heappop, heappush
 
 from networkx import DiGraph
-
+from .functions import _reconstruct_path
 
 def _calculate_delay_sorted_nr(graph, from_node, to_node, current_time, wheelchair=False):
     """
@@ -154,17 +154,9 @@ def time_dependent_dijkstra(graph, source, target, start_time, track_used_routes
                     # Add the neighbor to the queue with the new arrival time
                     heappush(queue, (new_arrival_time, v))
     
-    # reconstruct the path
-    path = []
-    current_node = target
-    # Iterate over all predecessors of the target node
-    while current_node is not None:
-        path.append(current_node)
-        current_node = predecessors[current_node]
-    path.reverse()
-
     travel_time = arrival_times[target] - start_time
-
+    # reconstruct the path
+    path = _reconstruct_path(target=target, predecessors=predecessors)
     if track_used_routes:
         if path[0] == source:
             # Empty set to track used routes

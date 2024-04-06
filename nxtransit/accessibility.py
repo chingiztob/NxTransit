@@ -29,7 +29,7 @@ def calculate_od_matrix(
         The graph representing the transit network.
     nodes : list
         A list of node IDs in the graph.
-    departure_time : int
+    departure_time : float
         The departure time in seconds since midnight.
     hashtable: dict, optional
         Hash table for the graph.

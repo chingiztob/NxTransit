@@ -96,7 +96,6 @@ def _process_trip_group(
         schedule_info = (departure, arrival, route_id, wheelchair_accessible)
 
         # If read_shapes is True, use the shape geometry from shapes.txt
-        geometry = None
         if read_shapes:
             shape_id = trip_to_shape_map.get(trip_id)
             geometry = shapes.get(shape_id)
@@ -177,14 +176,14 @@ def _split_dataframe(df: pd.DataFrame, n_splits: int) -> list[pd.DataFrame]:
 
     # Determine the number of rows each split will have
     split_sizes = [
-        base_size + 1 if i < remainder 
+        base_size + 1 if i < remainder
         else base_size for i in range(n_splits)
     ]
     # Calculate the start indices for each split
     start_indices = [sum(split_sizes[:i]) for i in range(n_splits)]
 
     return [
-        df.iloc[start : start + size] for start, size 
+        df.iloc[start : start + size] for start, size
         in zip(start_indices, split_sizes)
     ]
 
@@ -224,7 +223,7 @@ def _load_GTFS(
     # Initialize the graph and read data files.
     G = nx.DiGraph()
     stops_df = pd.read_csv(
-        os.path.join(GTFSpath, "stops.txt"), 
+        os.path.join(GTFSpath, "stops.txt"),
         usecols=["stop_id", "stop_lat", "stop_lon"]
     )
     stop_times_df = pd.read_csv(
@@ -236,7 +235,7 @@ def _load_GTFS(
     )
     trips_df = pd.read_csv(os.path.join(GTFSpath, "trips.txt"))
     calendar_df = pd.read_csv(os.path.join(GTFSpath, "calendar.txt"))
-    
+
     # Load shapes.txt if read_shapes is True
     if read_shapes:
         logger.warning("Reading shapes is currently not working as intended")
@@ -410,7 +409,7 @@ def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
 
 
 def feed_to_graph(
-    GTFSpath: str, 
+    GTFSpath: str,
     departure_time_input: str,
     day_of_week: str,
     duration_seconds: int,
@@ -456,7 +455,7 @@ def feed_to_graph(
     bool_feed_valid = validate_feed(GTFSpath)
     if not bool_feed_valid:
         raise ValueError("The GTFS feed is not valid")
-    
+
     G_transit, stops = _load_GTFS(
         GTFSpath,
         departure_time_input,

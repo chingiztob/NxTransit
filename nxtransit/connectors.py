@@ -107,7 +107,8 @@ def snap_points_to_network(graph: DiGraph, points: GeoDataFrame):
     input_epsg = points.crs.to_epsg()
     crs_input = CRS.from_epsg(input_epsg)
     crs_4087 = CRS.from_epsg(4087)
-    transformer = Transformer.from_crs(crs_input, crs_4087)
+    transformer_87 = Transformer.from_crs(crs_input, crs_4087)
+    transformer_46 = Transformer.from_crs(crs_input, CRS.from_epsg(4326))
     
     if 'origin_id' not in points.columns:
         points['origin_id'] = points.index
@@ -116,21 +117,22 @@ def snap_points_to_network(graph: DiGraph, points: GeoDataFrame):
 
         geometry = row['geometry']
         point_id = row['origin_id']
-        pnt_x, pnt_y = transformer.transform(xx=geometry.x, yy=geometry.y)
-
+        pnt_x, pnt_y = transformer_87.transform(xx=geometry.x, yy=geometry.y)
+        pnt_wgs_y, pnt_wgs_x = transformer_46.transform(xx=geometry.x, yy=geometry.y)
+        
         # query returns the distance to the nearest neighbor and its index in the tree
         distance, idx = tree.query((pnt_x, pnt_y))
         nearest_street_node = node_data[idx][2]
 
         # Add a connector edge to the graph
         # Create a LineString geometry for the connector edge
-        street_geom = shapely.geometry.Point((node_data[idx][3],
-                                                node_data[idx][4]))
-        linestring = shapely.geometry.LineString([geometry, street_geom])
+        street_geom = shapely.geometry.Point((node_data[idx][3], node_data[idx][4]))
+        snapped_geom = shapely.geometry.Point(pnt_wgs_x, pnt_wgs_y)
+        linestring = shapely.geometry.LineString([snapped_geom, street_geom])
 
         walk_time = distance / 1.39  # walk speed in m/s
 
-        graph.add_node(point_id, x=geometry.x, y=geometry.y, type='snapped')
+        graph.add_node(point_id, x=pnt_wgs_x, y=pnt_wgs_y, type='snapped')
 
         graph.add_edge(point_id, nearest_street_node,
                         weight=walk_time,
