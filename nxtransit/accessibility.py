@@ -65,11 +65,11 @@ def calculate_od_matrix(
                         "source_node": source_node,
                         "destination_node": dest_node,
                         "arrival_time": arrival_times[dest_node],
-                        "travel_time": travel_times.get(dest_node, None),  # .get() to avoid KeyError
+                        "travel_time": travel_times.get(dest_node, None)
                     }
                 )
 
-    # Convert the list of results to a DataFrame and to a csv file
+    # Convert the list of results to a DataFrame
     results_df = pd.DataFrame(results)
 
     return results_df

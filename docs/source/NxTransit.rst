@@ -1,5 +1,5 @@
-API Reference
-=============
+User Reference
+==============
 
 This is the User Reference for the **NxTransit** package. This guide describes the usage of NxTransit public API.
 

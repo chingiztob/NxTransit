@@ -169,7 +169,6 @@ def _split_dataframe(df: pd.DataFrame, n_splits: int) -> list[pd.DataFrame]:
     list of pandas DataFrames
         A list of DataFrame parts.
     """
-    # Calculate split sizes
     total_rows = len(df)
     base_size = total_rows // n_splits
     remainder = total_rows % n_splits
@@ -220,7 +219,7 @@ def _load_GTFS(
             - nx.DiGraph: Graph representing GTFS data.
             - pd.DataFrame: DataFrame containing stop information.
     """
-    # Initialize the graph and read data files.
+    # Initializing empty graph and read data files.
     G = nx.DiGraph()
     stops_df = pd.read_csv(
         os.path.join(GTFSpath, "stops.txt"),
@@ -353,7 +352,7 @@ def _load_GTFS(
         return G, stops_df
 
 
-def _load_osm(stops, save_graphml, path) -> nx.DiGraph:
+def _load_osm(stops: pd.DataFrame, save_graphml: bool, path) -> nx.DiGraph:
     """
     Loads OpenStreetMap data within a convex hull of stops in GTFS feed, 
     creates a street network graph, and adds walking times as edge weights.
@@ -477,7 +476,7 @@ def feed_to_graph(
 
     # Combining OSM and GTFS data
     G_combined = nx.compose(G_transit, G_city)
-    # Filling projected coordinates for graph nodes
+    # Filling EPSG:4087 coordinates for graph nodes
     _fill_coordinates(G_combined)
     # Connecting stops to OSM streets
     connect_stops_to_streets(G_combined, stops)

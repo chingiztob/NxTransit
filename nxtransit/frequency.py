@@ -122,9 +122,7 @@ def connectivity_frequency(graph, source, target, start_time, end_time, sampling
         for start_time in range(start_time, end_time, sampling_interval)
     ]
 
-    # Convert the travel times to a numpy array
     time_values = np.array([float(item[1]) for item in data])
-    # Convert the time values to seconds
     time_seconds = np.array([float(item[0]) for item in data])
 
     # Compute the first and second derivatives of the travel times
@@ -133,7 +131,6 @@ def connectivity_frequency(graph, source, target, start_time, end_time, sampling
 
     # Find the extrema in the second derivative
     peaks, _ = scipy.signal.find_peaks(second_derivative)
-
     # Calculate the intervals between the peaks
     intervals = np.diff(time_seconds[peaks])
 
