@@ -7,38 +7,6 @@ import pandas as pd
 from shapely.geometry import Polygon
 
 
-def determine_utm_zone(gdf: gpd.GeoDataFrame) -> str:
-    """
-    Determines the UTM zone for a GeoDataFrame based on its centroid.
-    
-    Parameters
-    ----------
-    gdf : GeoDataFrame
-        The input geospatial data.
-    
-    Returns
-    -------
-    epsg_code: str
-        UTM EPSG code as string.
-    """
-    # Ensure the GeoDataFrame is in geographic coordinates (EPSG:4326)
-    gdf_proj = gdf.to_crs("EPSG:4326")
-
-    minx, miny, maxx, maxy = gdf_proj.total_bounds
-    centroid_longitude = (minx + maxx) / 2
-
-    # Determine UTM zone number
-    utm_zone = math.floor((centroid_longitude + 180) / 6) + 1
-    # Determine hemisphere (north or south)
-    hemisphere = "north" if (miny + maxy) / 2 >= 0 else "south"
-    # Construct EPSG code for UTM
-    epsg_code = (
-        f"EPSG:326{utm_zone}" if hemisphere == "north" else f"EPSG:327{utm_zone}"
-    )
-
-    return epsg_code
-
-
 def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFrame:
     """
     Creates a grid of square cells covering the extent of the input GeoDataFrame, 
@@ -57,7 +25,7 @@ def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFra
         The resulting grid GeoDataFrame, with cells containing at least
         one feature from the source GeoDataFrame, and a 'id' for each cell.
     """
-    utm_crs = determine_utm_zone(gdf)
+    utm_crs = gdf.estimate_utm_crs()
     gdf_utm = gdf.to_crs(utm_crs)
     minx, miny, maxx, maxy = gdf_utm.total_bounds
 

@@ -13,7 +13,6 @@ from geocube.vector import vectorize
 from networkx import DiGraph
 from shapely.geometry import Point
 
-from .functions import determine_utm_zone
 from .routers import single_source_time_dependent_dijkstra
 
 
@@ -199,7 +198,6 @@ def service_area(
     --------
     nxtransit.accessibility.percent_access_service_area : Service area reachable with specified chance
     nxtransit.accessibility.service_area_multiple_sources : Service areas for multiple sources using multiprocessing
-    nxtransit.functions.determine_utm_zone : Determine the UTM zone of a GeoDataFrame.
     """
 
     _, _, travel_times = single_source_time_dependent_dijkstra(
@@ -232,7 +230,7 @@ def service_area(
     ]
 
     edges_gdf = gpd.GeoDataFrame(reached_edges, geometry="geometry", crs="EPSG:4326")
-    utm_crs = determine_utm_zone(edges_gdf)
+    utm_crs = edges_gdf.estimate_utm_crs()
     # Re-projection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
     buffer_gdf = edges_gdf.to_crs(crs=utm_crs).buffer(buffer_radius)
 
