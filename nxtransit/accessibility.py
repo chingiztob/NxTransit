@@ -51,7 +51,7 @@ def calculate_od_matrix(
         # Calculate arrival times and travel times
         # for each node using the specified algorithm
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source_node, departure_time, hashtable, algorithm=algorithm
+            graph=graph, source=source_node, start_time=departure_time, hashtable=hashtable,
         )
 
         # Iterate through all nodes to select them
@@ -83,11 +83,11 @@ def _calculate_od_worker(
 
     if hashtable:
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source_node, departure_time, hashtable, algorithm="hashed"
+            graph=graph, source=source_node, start_time=departure_time, hashtable=hashtable
         )
     else:
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source_node, departure_time, algorithm="sorted"
+            graph=graph, source=source_node, start_time=departure_time, hashtable=hashtable
         )
 
     return [

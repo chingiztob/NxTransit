@@ -81,7 +81,7 @@ def test_next_departure_exists_hashed(hash):
     current_time = 25
     expected_delay = 15
 
-    delay = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
+    delay, _ = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
 
     assert delay == expected_delay
 
@@ -91,7 +91,7 @@ def test_next_departure_does_not_exist_hashed(hash):
     current_time = 70
     expected_delay = float('inf')
 
-    delay = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
+    delay, _ = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
 
     assert delay == expected_delay
 
@@ -102,6 +102,6 @@ def test_edge_not_time_dependent_hashed(hash):
     current_time = 25
     expected_delay = 10
 
-    delay = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
+    delay, _ = _calculate_delay_hashed(from_node, to_node, current_time, hash, wheelchair=False)
 
     assert delay == expected_delay
