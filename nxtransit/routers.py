@@ -154,7 +154,7 @@ def time_dependent_dijkstra(
        Time-dependent Networks as Models to Achieve Fast Exact Time-table Queries.
        Electronic Notes in Theoretical Computer Science, 92:3-15, 2004.
        https://doi.org/10.1016/j.entcs.2003.12.019 [1]_
-    .. [2] Ulrik Brandes:
+    .. [2] Bradfield:
        Shortest Path with Dijkstra's Algorithm
        Practical Algorithms and Data Structures
        https://bradfieldcs.com/algos/graphs/dijkstras-algorithm/ [2]_
