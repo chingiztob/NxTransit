@@ -32,8 +32,6 @@ def calculate_od_matrix(
         The departure time in seconds since midnight.
     hashtable: dict, optional
         Hash table for the graph.
-    algorithm: str, optional
-        Algorithm to use for the OD matrix calculation (default: 'sorted').
 
     Returns
     -------
@@ -201,7 +199,7 @@ def service_area(
     """
 
     _, _, travel_times = single_source_time_dependent_dijkstra(
-        graph, source, start_time, hashtable, algorithm
+        graph, source, start_time, hashtable
     )
 
     # Filter nodes that are reachable within the cutoff
