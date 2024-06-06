@@ -71,20 +71,15 @@ def calculate_od_matrix(
 
 
 def _calculate_od_worker(
-    source_node, nodes_list, graph, departure_time, hashtable=None
+    source_node, nodes_list, graph, departure_time,
 ):
     """
     Internal worker function to calculate the OD matrix for a single source node.
     """
 
-    if hashtable:
-        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph=graph, source=source_node, start_time=departure_time
-        )
-    else:
-        arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph=graph, source=source_node, start_time=departure_time
-        )
+    arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
+        graph=graph, source=source_node, start_time=departure_time
+    )
 
     return [
         {
