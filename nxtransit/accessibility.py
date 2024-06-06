@@ -3,7 +3,7 @@
 import multiprocessing
 import time
 from functools import partial
-from typing import Any, Dict, Optional
+from typing import Any
 
 import geopandas as gpd
 import pandas as pd
@@ -17,7 +17,7 @@ from .routers import single_source_time_dependent_dijkstra
 
 
 def calculate_od_matrix(
-    graph: DiGraph, nodes: list, departure_time: float, hashtable: dict = None, algorithm="sorted"
+    graph: DiGraph, nodes: list, departure_time: float,
 ):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, nodes, and departure time.
@@ -30,8 +30,6 @@ def calculate_od_matrix(
         A list of node IDs in the graph.
     departure_time : float
         The departure time in seconds since midnight.
-    hashtable: dict, optional
-        Hash table for the graph.
 
     Returns
     -------
@@ -49,7 +47,7 @@ def calculate_od_matrix(
         # Calculate arrival times and travel times
         # for each node using the specified algorithm
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph=graph, source=source_node, start_time=departure_time, hashtable=hashtable,
+            graph=graph, source=source_node, start_time=departure_time
         )
 
         # Iterate through all nodes to select them
@@ -81,11 +79,11 @@ def _calculate_od_worker(
 
     if hashtable:
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph=graph, source=source_node, start_time=departure_time, hashtable=hashtable
+            graph=graph, source=source_node, start_time=departure_time
         )
     else:
         arrival_times, _, travel_times = single_source_time_dependent_dijkstra(
-            graph=graph, source=source_node, start_time=departure_time, hashtable=hashtable
+            graph=graph, source=source_node, start_time=departure_time
         )
 
     return [
@@ -106,7 +104,6 @@ def calculate_od_matrix_parallel(
     departure_time: float,
     target_nodes: list = None,
     num_processes: int = 2,
-    hashtable: dict = None,
 ) -> pd.DataFrame:
     """
     Calculates the Origin-Destination (OD) matrix for a given graph,
@@ -124,8 +121,6 @@ def calculate_od_matrix_parallel(
         A list of target node IDs in the graph. If not specified, source nodes are used.
     num_processes : int
         Number of parallel processes to use for computation.
-    hashtable : dict, optional
-        Optional hash table for the graph.
 
     Returns
     -------
@@ -145,7 +140,6 @@ def calculate_od_matrix_parallel(
             nodes_list=target_nodes,
             graph=graph,
             departure_time=departure_time,
-            hashtable=hashtable,
         )
         results = pool.map(partial_worker, nodes)
 
@@ -160,8 +154,6 @@ def service_area(
     start_time: int,
     cutoff: float,
     buffer_radius: float = 100,
-    algorithm: str = "sorted",
-    hashtable: Optional[Dict] = None,
 ) -> gpd.GeoDataFrame:
     """
     Creates a service area by buffering around all street edges within a travel time cutoff.
@@ -178,10 +170,6 @@ def service_area(
         The travel time cutoff for including nodes in the service area.
     buffer_radius : float
         The radius in meters for buffering around each point.
-    algorithm : str, optional
-        Algorithm to use for the service area calculation (default: "sorted").
-    hashtable : dict, optional
-        Hashtable required for the "hashed" algorithm.
 
     Returns
     -------
@@ -199,7 +187,7 @@ def service_area(
     """
 
     _, _, travel_times = single_source_time_dependent_dijkstra(
-        graph, source, start_time, hashtable
+        graph, source, start_time,
     )
 
     # Filter nodes that are reachable within the cutoff
@@ -295,8 +283,6 @@ def percent_access_service_area(
     cutoff: int,
     buffer_radius: float,
     threshold: float,
-    algorithm: str = "sorted",
-    hashtable: Optional[Dict] = None,
 ) -> gpd.GeoDataFrame:
     """
     Calculate service area reachable with specified chance within the given time period.
@@ -323,10 +309,6 @@ def percent_access_service_area(
         The radius of the buffer around the service area.
     threshold : float
         The threshold value for rasterizing the service areas.
-    algorithm : str
-        optional. Algorithm to use for the service area calculation (default: 'sorted').
-    hashtable : dict, optional
-        Hashtable required for the algorithm (default: None).
 
     Returns
     -------
@@ -341,8 +323,6 @@ def percent_access_service_area(
             start_time=timestamp,
             cutoff=cutoff,
             buffer_radius=buffer_radius,
-            algorithm=algorithm,
-            hashtable=hashtable,
         )
         for timestamp in range(start_time, end_time, sample_interval)
     ]
@@ -356,8 +336,6 @@ def service_area_multiple_sources(
     start_time: int,
     cutoff: int,
     buffer_radius: float,
-    algorithm: str = "sorted",
-    hashtable: Optional[Dict] = None,
     num_processes: int = 6,
 ) -> gpd.GeoDataFrame:
     """
@@ -375,10 +353,6 @@ def service_area_multiple_sources(
         Maximum travel time or distance for the service area.
     buffer_radius : float
         Radius to buffer the service area polygons.
-    algorithm : str, optional
-        Algorithm to use for the service area calculation (default: 'sorted').
-    hashtable : dict, optional
-        Hashtable to store calculated service areas (default: None).
     num_processes : int, optional
         Number of processes to use for parallel execution (default: 6).
 
@@ -389,7 +363,7 @@ def service_area_multiple_sources(
     """
     # Prepare arguments for each task
     tasks = [
-        (graph, source, start_time, cutoff, buffer_radius, algorithm, hashtable)
+        (graph, source, start_time, cutoff, buffer_radius)
         for source in sources
     ]
 

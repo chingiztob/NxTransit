@@ -180,7 +180,7 @@ def single_source_connectivity_frequency(
     # Iterate over each sampling interval
     for current_time in range(start_time, end_time, sampling_interval):
         _, _, travel_times = single_source_time_dependent_dijkstra(
-            graph, source, current_time, hashtable
+            graph, source, current_time,
         )
 
         # Update travel times for each node
