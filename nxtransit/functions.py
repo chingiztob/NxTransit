@@ -306,32 +306,3 @@ def separate_travel_times(graph, predecessors: dict, travel_times: dict, source)
 
     results = pd.DataFrame(results)
     return results
-
-
-def process_graph_to_hash_table(graph) -> dict:
-    """
-    Process a graph and convert it into a hash table
-    mapping edges to their sorted schedules or static weights.
-
-    Parameters
-    ----------
-    graph : networkx.DiGraph
-        The input graph.
-
-    Returns
-    -------
-    dict
-        A dict mapping edges to their sorted schedules or static weights.
-    """
-    schedules_hash = {}
-    for from_node, to_node, data in graph.edges(data=True):
-        if "sorted_schedules" in data:
-            schedules_hash[(from_node, to_node)] = data["sorted_schedules"]
-        else:
-            # Static weight wrapped in a list of tuples to make it iterable
-            static_weight = data["weight"]
-            schedules_hash[(from_node, to_node)] = [
-                (static_weight,)
-            ]  # comma is to make it a tuple
-
-    return schedules_hash
