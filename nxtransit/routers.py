@@ -183,7 +183,6 @@ def single_source_time_dependent_dijkstra(
 ) -> Tuple[Dict[str, float], Dict[str, str], Dict[str, float]]:
     """
     Compute the shortest paths and travel times from a single source node to all other nodes in a time-dependent graph.
-    You can use the `process_graph_to_hash_table` function to create the hash table.
 
     Parameters
     ----------

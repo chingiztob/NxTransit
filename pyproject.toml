@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 dependencies = [
-    "geopandas>=0.14.0",
+    "geopandas>=0.14.0,<1.0.0",
     "networkx>=3.2.0",
     "numpy>=1.26.4",
     "osmnx>=1.9.1",
