@@ -17,7 +17,7 @@ def _calculate_delay(
     """
     edge = graph[from_node][to_node]
     schedules = edge.get("sorted_schedules")
-    
+
     if schedules:
         departure_times = edge["departure_times"]
         idx = bisect.bisect_left(departure_times, current_time)
@@ -25,17 +25,19 @@ def _calculate_delay(
         if idx < len(schedules):
             next_departure, next_arrival, route, wheelchair_acc = schedules[idx]
             if not wheelchair or wheelchair_acc == 1:
-                delay = (next_departure - current_time) + (next_arrival - next_departure)
+                delay = (next_departure - current_time) + (
+                    next_arrival - next_departure
+                )
                 return delay, route
 
         return float("inf"), None
     else:
-        return edge.get('weight', float('inf')), None
+        return edge.get("weight", float("inf")), None
 
 
 def time_dependent_dijkstra(
     graph: DiGraph,
-    source: str,  
+    source: str,
     target: str,
     start_time: float,
     track_used_routes: bool = False,
@@ -43,7 +45,7 @@ def time_dependent_dijkstra(
 ) -> Tuple[List[str], float, float, Optional[set]]:
     """
     Finds the shortest path between two nodes in a time-dependent graph using Dijkstra's algorithm.
-    
+
     Parameters
     ----------
     graph : networkx.Graph
@@ -66,7 +68,7 @@ def time_dependent_dijkstra(
             - list: The shortest path from the source to the target node.
             - float: The arrival time at the target node.
             - float: The travel time from the source to the target node.
-    
+
     Examples
     --------
     >>> G = nt.feed_to_graph(feed)
@@ -84,11 +86,11 @@ def time_dependent_dijkstra(
     >>> G = nx.DiGraph()
     >>> G.add_edge('A', 'B')
     >>> G.edges['A', 'B']['sorted_schedules'] = [(10, 20, 'route_1', None),(30, 40, 'route_2', None), (50, 60, 'route_3', None)]
-    
+
     So the edge from 'A' to 'B' has three schedules: route_1 departs at 10 and arrives at 20, route_2 departs at 30 and arrives at 40, and route_3 departs at 50 and arrives at 60.
     Internal function ``_calculate_delay`` will return the delay and the route for the next departure from 'A' to 'B' at a given time.
     i.e. if the current time is 25, the next departure is at 30, so the delay is 5 and time to arrival is 5 + (40 - 30) = 10.
-    
+
     References
     ----------
     .. [1] Gerth Stølting Brodal, Riko Jacob:
@@ -105,7 +107,7 @@ def time_dependent_dijkstra(
         raise ValueError("The source or target node does not exist in the graph.")
 
     # Initialize arrival times and predecessors for the current node in the queue
-    arrival_times = {node: float('inf') for node in graph.nodes}
+    arrival_times = {node: float("inf") for node in graph.nodes}
     predecessors = {node: None for node in graph.nodes}
     arrival_times[source] = start_time
     queue = [(start_time, source)]
@@ -134,7 +136,7 @@ def time_dependent_dijkstra(
                     graph, u, v, current_time, wheelchair=wheelchair
                 )
                 # Skip the neighbor if the arrival time is infinite
-                if delay == float('inf'):
+                if delay == float("inf"):
                     continue
                 # Calculate the new arrival time for the neighbor
                 new_arrival_time = current_time + delay
@@ -149,7 +151,7 @@ def time_dependent_dijkstra(
                     predecessors[v] = u
                     # Add the neighbor to the queue with the new arrival time
                     heappush(queue, (new_arrival_time, v))
-    
+
     travel_time = arrival_times[target] - start_time
     # reconstruct the path
     path = _reconstruct_path(target=target, predecessors=predecessors)
@@ -165,15 +167,14 @@ def time_dependent_dijkstra(
             return path, arrival_times[target], travel_time, used_routes
         else:
             # If the path does not start with the source node, something went wrong, the path was not found
-            return [], float('inf'), -1, set()
+            return [], float("inf"), -1, set()
 
     else:
-
         if path[0] == source:
             return path, arrival_times[target], travel_time
         else:
             # If the path does not start with the source node, something went wrong, the path was not found
-            return [], float('inf'), -1
+            return [], float("inf"), -1
 
 
 def single_source_time_dependent_dijkstra(

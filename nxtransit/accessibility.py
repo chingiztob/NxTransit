@@ -215,7 +215,7 @@ def service_area(
     # Re-projection to World Equidistant Cylindrical (EPSG:4087) for buffering in meters
     buffer_gdf = edges_gdf.to_crs(crs=utm_crs).buffer(buffer_radius)
 
-    service_area_polygon = buffer_gdf.unary_union
+    service_area_polygon = buffer_gdf.union_all()
     # overlap_count is needed for percent_access calculation
     service_area_gdf = gpd.GeoDataFrame(
         {"geometry": [service_area_polygon], "id": source, "overlap_count": 1},
@@ -263,7 +263,7 @@ def _rasterize_service_areas(service_areas, threshold, resolution=(100, 100)):
     polygons_needed = int(len(service_areas) * threshold)
     vectorized_result = vectorized_result[
         vectorized_result["overlap_count"] >= polygons_needed
-    ].unary_union
+    ].union_all()
     result_gdf = gpd.GeoDataFrame({"geometry": [vectorized_result]}, crs="EPSG:4087")
 
     return result_gdf
