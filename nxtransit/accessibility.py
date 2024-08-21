@@ -17,7 +17,9 @@ from .routers import single_source_time_dependent_dijkstra
 
 
 def calculate_od_matrix(
-    graph: DiGraph, nodes: list, departure_time: float,
+    graph: DiGraph,
+    nodes: list,
+    departure_time: float,
 ):
     """
     Calculates the Origin-Destination (OD) matrix for a given graph, nodes, and departure time.
@@ -60,7 +62,7 @@ def calculate_od_matrix(
                         "source_node": source_node,
                         "destination_node": dest_node,
                         "arrival_time": arrival_times[dest_node],
-                        "travel_time": travel_times.get(dest_node, None)
+                        "travel_time": travel_times.get(dest_node, None),
                     }
                 )
 
@@ -71,7 +73,10 @@ def calculate_od_matrix(
 
 
 def _calculate_od_worker(
-    source_node, nodes_list, graph, departure_time,
+    source_node,
+    nodes_list,
+    graph,
+    departure_time,
 ):
     """
     Internal worker function to calculate the OD matrix for a single source node.
@@ -97,7 +102,7 @@ def calculate_od_matrix_parallel(
     graph: DiGraph,
     nodes,
     departure_time: float,
-    target_nodes: list = None,
+    target_nodes: list | None = None,
     num_processes: int = 2,
 ) -> pd.DataFrame:
     """
@@ -182,7 +187,9 @@ def service_area(
     """
 
     _, _, travel_times = single_source_time_dependent_dijkstra(
-        graph, source, start_time,
+        graph,
+        source,
+        start_time,
     )
 
     # Filter nodes that are reachable within the cutoff
@@ -357,10 +364,7 @@ def service_area_multiple_sources(
         A GeoDataFrame containing the combined service area polygon for all sources.
     """
     # Prepare arguments for each task
-    tasks = [
-        (graph, source, start_time, cutoff, buffer_radius)
-        for source in sources
-    ]
+    tasks = [(graph, source, start_time, cutoff, buffer_radius) for source in sources]
 
     with multiprocessing.Pool(processes=num_processes) as pool:
         results = pool.starmap(service_area, tasks)
@@ -369,7 +373,7 @@ def service_area_multiple_sources(
     # Combine all service area polygons into a single GeoDataFrame
     combined_service_area = gpd.GeoDataFrame(
         pd.concat(results, ignore_index=True), crs="EPSG:4087"
-    )
+    ) # type: ignore
 
     return combined_service_area
 

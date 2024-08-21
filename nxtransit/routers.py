@@ -72,7 +72,7 @@ def time_dependent_dijkstra(
     Examples
     --------
     >>> G = nt.feed_to_graph(feed)
-    >>> path, arrival_time, travel_time = nt.time_dependent_dijkstra(G, 'A', 'B', 86400)
+    >>> path, arrival_time, travel_time = nt.time_dependent_dijkstra(G, "A", "B", 86400)
 
     Implementation
     --------------
@@ -84,8 +84,12 @@ def time_dependent_dijkstra(
     parameter is set to True.
 
     >>> G = nx.DiGraph()
-    >>> G.add_edge('A', 'B')
-    >>> G.edges['A', 'B']['sorted_schedules'] = [(10, 20, 'route_1', None),(30, 40, 'route_2', None), (50, 60, 'route_3', None)]
+    >>> G.add_edge("A", "B")
+    >>> G.edges["A", "B"]["sorted_schedules"] = [
+    ...     (10, 20, "route_1", None),
+    ...     (30, 40, "route_2", None),
+    ...     (50, 60, "route_3", None),
+    ... ]
 
     So the edge from 'A' to 'B' has three schedules: route_1 departs at 10 and arrives at 20, route_2 departs at 30 and arrives at 40, and route_3 departs at 50 and arrives at 60.
     Internal function ``_calculate_delay`` will return the delay and the route for the next departure from 'A' to 'B' at a given time.
@@ -180,7 +184,7 @@ def time_dependent_dijkstra(
 def single_source_time_dependent_dijkstra(
     graph: DiGraph,
     source: str,
-    start_time: int,
+    start_time: float,
 ) -> Tuple[Dict[str, float], Dict[str, str], Dict[str, float]]:
     """
     Compute the shortest paths and travel times from a single source node to all other nodes in a time-dependent graph.
@@ -191,7 +195,7 @@ def single_source_time_dependent_dijkstra(
         The time-dependent graph.
     source : Node
         The source node of the graph.
-    start_time : int
+    start_time : float
         The starting time in seconds since midnight.
 
     Returns

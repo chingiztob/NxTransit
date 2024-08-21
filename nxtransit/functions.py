@@ -67,7 +67,7 @@ def create_centroids_dataframe(polygon_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFram
     polygon_gdf : gpd.GeoDataFrame
         GeoDataFrame containing polygons.
 
-    Returns
+    Returns:
     -------
     gpd.GeoDataFrame
         GeoDataFrame with Point geometries of the centroids.
