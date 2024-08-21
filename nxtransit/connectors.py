@@ -14,7 +14,7 @@ def _fill_coordinates(graph: DiGraph):
     Populates 'metric_X' and 'metric_Y' attributes of the nodes.
 
     Raises:
-    ------
+    -------
     Exception
         If an error occurs during coordinate transformation for a node.
     """
@@ -96,7 +96,7 @@ def snap_points_to_network(graph: DiGraph, points: GeoDataFrame):
             GeoDataFrame containing point geometries.
 
     Returns:
-    -------
+    --------
         None. The input graph is modified in-place with added snapped points as nodes.
     """
     # Create a list of street node tuples (x, y, node_id)
