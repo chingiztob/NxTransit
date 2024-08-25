@@ -2,7 +2,7 @@
 select = ["E4", "E7", "E9", "F", "C901", "N"]
 
 [lint.pydocstyle]
-convention = "google"
+convention = "numpy"
 
 [format]
 docstring-code-format = true

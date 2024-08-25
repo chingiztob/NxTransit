@@ -373,7 +373,7 @@ def service_area_multiple_sources(
     # Combine all service area polygons into a single GeoDataFrame
     combined_service_area = gpd.GeoDataFrame(
         pd.concat(results, ignore_index=True), crs="EPSG:4087"
-    ) # type: ignore
+    )  # type: ignore
 
     return combined_service_area
 
