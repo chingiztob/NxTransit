@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "NxTransit"
@@ -42,11 +42,14 @@ requires-python = ">=3.10"
 tests = ["pytest>=8.0.1"]
 docs = ["myst-nb", "sphinx-book-theme", "sphinx==7.2.6"]
 
-[tool.setuptools]
+[tool.hatch.build]
 packages = ["nxtransit"]
 
-[tool.setuptools.dynamic.version]
-attr = 'nxtransit.__version__'
+[tool.hatch.version]
+path = 'nxtransit/__init__.py'
+
+[tool.hatch.envs.default]
+installer = "uv"
 
 # python -m build
 # twine upload dist/*
