@@ -10,7 +10,7 @@ from networkx import DiGraph
 
 def _fill_coordinates(graph: DiGraph):
     """Transforms the coordinates of nodes in the graph from EPSG:4326 to EPSG:4087.
-    
+
     Populates 'metric_X' and 'metric_Y' attributes of the nodes.
 
     Raises:
