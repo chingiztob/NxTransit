@@ -49,6 +49,7 @@ dev-dependencies = [
     "myst-nb",
     "sphinx-book-theme",
     "twine",
+    "h3pandas",
 ]
 
 [tool.hatch.build]
@@ -59,6 +60,3 @@ path = 'nxtransit/__init__.py'
 
 [tool.hatch.envs.default]
 installer = "uv"
-
-# twine upload dist/*
-# twine upload --repository testpypi dist/*
