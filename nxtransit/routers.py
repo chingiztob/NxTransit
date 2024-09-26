@@ -15,7 +15,7 @@ def _calculate_delay(
     Calculates the delay and route for a given graph, from_node, to_node, and current_time.
     Used in the time-dependent Dijkstra algorithm.
     """
-    edge = graph[from_node][to_node]
+    edge: dict = graph[from_node][to_node]
     schedules = edge.get("sorted_schedules")
 
     if schedules:

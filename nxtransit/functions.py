@@ -15,7 +15,7 @@ def aggregate_to_grid(gdf: gpd.GeoDataFrame, cell_size: float) -> gpd.GeoDataFra
     Parameters
     ----------
     gdf : gpd.GeoDataFrame
-        The input GeoDataFrame representing the spatial extent and features.
+        The input GeoDataFrame representing the spatial extent or features.
     cell_size : float
         The size of each square cell in the grid in meters.
     
