@@ -25,7 +25,9 @@ def _preprocess_schedules(graph: nx.DiGraph):
             sorted_schedules = sorted(data["schedules"], key=lambda x: x[0])
             data["sorted_schedules"] = sorted_schedules
             data["departure_times"] = [schedule[0] for schedule in sorted_schedules]
-            data["static_weight"] = float("inf") # temp
+            data["static_weight"] = sum(
+                arrival - departure for departure, arrival, _, _ in sorted_schedules
+            ) / len(sorted_schedules)  # temp
 
 
 def _add_edge_with_geometry(graph, start_stop, end_stop, schedule_info, geometry):
@@ -406,7 +408,7 @@ def _load_osm(stops: pd.DataFrame, save_graphml: bool, path) -> nx.DiGraph:
 
         # Calculate walking time in seconds
         data["weight"] = data["length"] / 1.39
-        data["static_weight"] = data["weight"] # temp
+        data["static_weight"] = data["weight"]  # temp
         data["type"] = "street"
 
         # Add geometry to the edge
