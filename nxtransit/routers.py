@@ -56,8 +56,6 @@ def time_dependent_dijkstra(
         The target node.
     start_time : float
         The starting time.
-    track_used_routes : bool, optional
-        If set to True, the algorithm will return a set of used transit routes.
     wheelchair : bool, optional
         If set to True, the algorithm will only use wheelchair accessible routes.
 
@@ -68,6 +66,7 @@ def time_dependent_dijkstra(
             - list: The shortest path from the source to the target node.
             - float: The arrival time at the target node.
             - float: The travel time from the source to the target node.
+            - set: The set of used routes.
 
     Examples
     --------
@@ -80,8 +79,7 @@ def time_dependent_dijkstra(
     almost classic Dijkstra's algorithm. The main difference is that the
     delay between two nodes is calculated based on the ``current time``
     and the sorted schedules of the edge. The function also keeps
-    track of the routes used in the path if the ``track_used_routes``
-    parameter is set to True.
+    track of the routes used in the path.
 
     >>> G = nx.DiGraph()
     >>> G.add_edge("A", "B")
@@ -148,8 +146,7 @@ def time_dependent_dijkstra(
                 if new_arrival_time < arrival_times[v]:
                     arrival_times[v] = new_arrival_time
 
-                    if track_used_routes:
-                        routes[v] = route
+                    routes[v] = route
 
                     # Assign the current node U as the predecessor of the neighbor V (in the loop)
                     predecessors[v] = u
@@ -159,26 +156,19 @@ def time_dependent_dijkstra(
     travel_time = arrival_times[target] - start_time
     # reconstruct the path
     path = _reconstruct_path(target=target, predecessors=predecessors)
-    if track_used_routes:
-        if path[0] == source:
-            # Empty set to track used routes
-            used_routes = set()
-            # Iterate over all nodes in the path
-            for i in range(len(path) - 1):
-                v = path[i + 1]
-                # Add route, used to go from node U to node V
-                used_routes.add(routes[v])
-            return path, arrival_times[target], travel_time, used_routes
-        else:
-            # If the path does not start with the source node, something went wrong, the path was not found
-            return [], float("inf"), -1, set()
 
+    if path[0] == source:
+        # Empty set to track used routes
+        used_routes = set()
+        # Iterate over all nodes in the path
+        for i in range(len(path) - 1):
+            v = path[i + 1]
+            # Add route, used to go from node U to node V
+            used_routes.add(routes[v])
+        return path, arrival_times[target], travel_time, used_routes
     else:
-        if path[0] == source:
-            return path, arrival_times[target], travel_time
-        else:
-            # If the path does not start with the source node, something went wrong, the path was not found
-            return [], float("inf"), -1
+        # If the path does not start with the source node, something went wrong, the path was not found
+        return [], float("inf"), -float("inf"), set()
 
 
 def single_source_time_dependent_dijkstra(
